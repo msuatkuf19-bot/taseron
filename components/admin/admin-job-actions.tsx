@@ -36,8 +36,7 @@ export function AdminJobActions({ jobId, currentStatus }: AdminJobActionsProps) 
   const handleToggleStatus = async () => {
     setLoading(true);
     try {
-      const newStatus: JobStatus = currentStatus === "OPEN" ? "CLOSED" : "OPEN";
-      const result = await adminToggleJobStatus(jobId, newStatus);
+      const result = await adminToggleJobStatus(jobId);
       if (result.success) {
         router.refresh();
       } else {
