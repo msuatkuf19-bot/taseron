@@ -629,6 +629,49 @@ export async function adminUnpublishJob(jobId: string, reason?: string) {
 // ============ LEGACY COMPATIBILITY ============
 
 /**
+ * İlan durumunu aç/kapa (OPEN/CLOSED)
+ */
+export async function toggleJobStatus(jobId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user) {
+      return { error: "Oturum bulunamadı" };
+    }
+
+    const job = await prisma.jobPost.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!job) {
+      return { error: "İlan bulunamadı" };
+    }
+
+    // Sadece kendi ilanını veya admin değiştirebilir
+    if (job.createdById !== session.user.id && session.user.role !== "ADMIN") {
+      return { error: "Bu işlem için yetkiniz yok" };
+    }
+
+    const newStatus: JobStatus = job.status === "OPEN" ? "CLOSED" : "OPEN";
+
+    await prisma.jobPost.update({
+      where: { id: jobId },
+      data: { status: newStatus },
+    });
+
+    revalidatePath("/dashboard/firma");
+    revalidatePath("/dashboard/taseron/ilanlar");
+    revalidatePath("/admin/jobs");
+    revalidatePath(`/ilan/${jobId}`);
+
+    return { success: true, status: newStatus };
+  } catch (error) {
+    console.error("Toggle job status error:", error);
+    return { error: "Durum değiştirilirken bir hata oluştu" };
+  }
+}
+
+/**
  * Firma kendi ilanlarını listeler
  */
 export async function getMyJobs() {

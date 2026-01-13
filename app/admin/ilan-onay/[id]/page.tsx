@@ -90,7 +90,9 @@ export default async function AdminIlanDetayPage({
                         ? `${job.budgetMin.toLocaleString()} - ${job.budgetMax.toLocaleString()} ₺`
                         : job.budgetMin
                         ? `${job.budgetMin.toLocaleString()} ₺+`
-                        : `${job.budgetMax.toLocaleString()} ₺'ye kadar`}
+                        : job.budgetMax
+                        ? `${job.budgetMax.toLocaleString()} ₺'ye kadar`
+                        : "Belirtilmemiş"}
                     </p>
                   </div>
                 )}
