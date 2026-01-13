@@ -14,10 +14,12 @@ export function ApprovalStatusBadge({
     DRAFT: {
       label: "Taslak",
       variant: "secondary" as const,
+      className: "",
     },
     PENDING_APPROVAL: {
       label: "Onay Bekliyor",
       variant: "default" as const,
+      className: "",
     },
     APPROVED: {
       label: "Onaylandı",
@@ -27,6 +29,7 @@ export function ApprovalStatusBadge({
     REJECTED: {
       label: "Reddedildi",
       variant: "destructive" as const,
+      className: "",
     },
   };
 

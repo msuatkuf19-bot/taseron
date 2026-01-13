@@ -89,6 +89,51 @@ export async function createJobDraft(data: JobPostCreateInput) {
 }
 
 /**
+ * Firma için direkt onaylanmış ilan oluşturur (admin onayı gerekmez)
+ */
+export async function createJob(data: JobPostCreateInput) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user || session.user.role !== "FIRMA") {
+      return { error: "Bu işlem için firma hesabı gerekli" };
+    }
+
+    if (!session.user.companyProfileId) {
+      return { error: "Firma profili bulunamadı" };
+    }
+
+    const validatedData = jobPostCreateSchema.parse(data);
+
+    const job = await prisma.jobPost.create({
+      data: {
+        title: validatedData.title,
+        description: validatedData.description,
+        city: validatedData.city,
+        category: validatedData.category as Category,
+        budgetMin: validatedData.budgetMin,
+        budgetMax: validatedData.budgetMax,
+        durationText: validatedData.durationText,
+        contactPhone: validatedData.contactPhone,
+        contactEmail: validatedData.contactEmail,
+        companyId: session.user.companyProfileId,
+        createdById: session.user.id,
+        status: "OPEN" as JobStatus,
+        approvalStatus: "APPROVED" as ApprovalStatus,
+      },
+    });
+
+    revalidatePath("/dashboard/firma");
+    revalidatePath("/ilanlar");
+
+    return { success: true, jobId: job.id };
+  } catch (error) {
+    console.error("Create job error:", error);
+    return { error: "İlan oluşturulurken bir hata oluştu" };
+  }
+}
+
+/**
  * Taşeron ilanını DRAFT/REJECTED durumundan PENDING_APPROVAL'a gönderir
  */
 export async function submitJobForApproval(jobId: string) {
