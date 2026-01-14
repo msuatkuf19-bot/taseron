@@ -1,120 +1,89 @@
 "use server";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import prisma from "@/lib/db";
-import { reviewSchema, type ReviewInput } from "@/lib/validators";
 import { revalidatePath } from "next/cache";
+import prisma from "@/lib/db";
+import { requireAuth, requireRole } from "@/lib/auth";
+import { z } from "zod";
 
-export async function createReview(
-  contractorId: string,
-  jobId: string,
-  data: ReviewInput
-) {
+// Validation schema
+const createReviewSchema = z.object({
+  jobId: z.string().optional(),
+  reviewedId: z.string().min(1, "Değerlendirilen kullanıcı gerekli"),
+  rating: z.number().min(1, "Puan en az 1 olmalı").max(5, "Puan en fazla 5 olabilir"),
+  comment: z.string().optional(),
+});
+
+type CreateReviewInput = z.infer<typeof createReviewSchema>;
+
+/**
+ * Firma taşerona değerlendirme yapar
+ */
+export async function createReview(data: CreateReviewInput) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await requireRole("FIRMA");
 
-    if (!session?.user || session.user.role !== "FIRMA") {
-      return { error: "Bu işlem için firma hesabı gerekli" };
+    const validatedData = createReviewSchema.parse(data);
+
+    // Değerlendirilen kullanıcı taşeron mi kontrol et
+    const reviewedUser = await prisma.user.findUnique({
+      where: { id: validatedData.reviewedId },
+      include: { contractorProfile: true },
+    });
+
+    if (!reviewedUser || !reviewedUser.contractorProfile) {
+      return { error: "Değerlendirilen kullanıcı taşeron değil" };
     }
 
-    if (!session.user.companyProfileId) {
-      return { error: "Firma profili bulunamadı" };
-    }
-
-    // Verify that there's an accepted bid for this job from this contractor
-    const acceptedBid = await prisma.bid.findFirst({
-      where: {
-        jobId,
-        contractorId,
-        status: "ACCEPTED",
-        job: {
-          companyId: session.user.companyProfileId,
+    // Daha önce bu kullanıcıya yorum yapmış mı?
+    if (validatedData.jobId) {
+      const existingReview = await prisma.review.findFirst({
+        where: {
+          reviewerId: user.id,
+          reviewedId: validatedData.reviewedId,
+          jobId: validatedData.jobId,
         },
-      },
-    });
+      });
 
-    if (!acceptedBid) {
-      return { error: "Bu taşeron için kabul edilmiş bir teklif bulunamadı" };
+      if (existingReview) {
+        return { error: "Bu iş için zaten değerlendirme yaptınız" };
+      }
     }
-
-    // Check if review already exists
-    const existingReview = await prisma.review.findFirst({
-      where: {
-        contractorId,
-        companyId: session.user.companyProfileId,
-        jobId,
-      },
-    });
-
-    if (existingReview) {
-      return { error: "Bu iş için zaten yorum yapmışsınız" };
-    }
-
-    const validatedData = reviewSchema.parse(data);
 
     const review = await prisma.review.create({
       data: {
-        contractorId,
-        companyId: session.user.companyProfileId,
-        jobId,
+        reviewerId: user.id,
+        reviewedId: validatedData.reviewedId,
+        jobId: validatedData.jobId || null,
         rating: validatedData.rating,
         comment: validatedData.comment || null,
       },
     });
 
-    revalidatePath(`/taseron/${contractorId}`);
-    revalidatePath("/dashboard/firma");
-
+    revalidatePath(`/taseron/${validatedData.reviewedId}`);
     return { success: true, reviewId: review.id };
   } catch (error) {
     console.error("Create review error:", error);
     if (error instanceof Error) {
       return { error: error.message };
     }
-    return { error: "Yorum oluşturulurken bir hata oluştu" };
+    return { error: "Değerlendirme yapılırken hata oluştu" };
   }
 }
 
-export async function deleteReview(reviewId: string) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return { error: "Bu işlem için admin yetkisi gerekli" };
-    }
-
-    const review = await prisma.review.findUnique({
-      where: { id: reviewId },
-    });
-
-    if (!review) {
-      return { error: "Yorum bulunamadı" };
-    }
-
-    await prisma.review.delete({
-      where: { id: reviewId },
-    });
-
-    revalidatePath(`/taseron/${review.contractorId}`);
-    revalidatePath("/admin/reviews");
-
-    return { success: true };
-  } catch (error) {
-    console.error("Delete review error:", error);
-    return { error: "Yorum silinirken bir hata oluştu" };
-  }
-}
-
-export async function getReviewsForContractor(contractorId: string) {
+/**
+ * Kullanıcının aldığı değerlendirmeleri listeler
+ */
+export async function getReviewsForUser(userId: string) {
   try {
     const reviews = await prisma.review.findMany({
-      where: { contractorId },
+      where: {
+        reviewedId: userId,
+      },
+      orderBy: { createdAt: "desc" },
       include: {
-        company: {
-          select: {
-            id: true,
-            companyName: true,
+        reviewer: {
+          include: {
+            companyProfile: true,
           },
         },
         job: {
@@ -124,58 +93,89 @@ export async function getReviewsForContractor(contractorId: string) {
           },
         },
       },
-      orderBy: { createdAt: "desc" },
     });
 
-    // Calculate average rating
-    const avgRating =
+    // Ortalama puan hesapla
+    const averageRating =
       reviews.length > 0
         ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
         : 0;
 
-    return { reviews, avgRating, totalReviews: reviews.length };
+    return {
+      reviews,
+      averageRating: Math.round(averageRating * 10) / 10,
+      totalReviews: reviews.length,
+    };
   } catch (error) {
     console.error("Get reviews error:", error);
-    return { error: "Yorumlar yüklenirken bir hata oluştu" };
+    throw new Error("Değerlendirmeler yüklenirken hata oluştu");
   }
 }
 
-export async function canReview(contractorId: string, jobId: string) {
+/**
+ * Admin bir değerlendirmeyi siler
+ */
+export async function deleteReview(reviewId: string) {
   try {
-    const session = await getServerSession(authOptions);
+    await requireRole("ADMIN");
 
-    if (!session?.user || session.user.role !== "FIRMA") {
-      return { canReview: false };
+    const review = await prisma.review.findUnique({
+      where: { id: reviewId },
+    });
+
+    if (!review) {
+      return { error: "Değerlendirme bulunamadı" };
     }
 
-    // Check for accepted bid
-    const acceptedBid = await prisma.bid.findFirst({
-      where: {
-        jobId,
-        contractorId,
-        status: "ACCEPTED",
+    await prisma.review.delete({
+      where: { id: reviewId },
+    });
+
+    revalidatePath("/admin/reviews");
+    revalidatePath(`/taseron/${review.reviewedId}`);
+
+    return { success: true };
+  } catch (error) {
+    console.error("Delete review error:", error);
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: "Değerlendirme silinirken hata oluştu" };
+  }
+}
+
+/**
+ * Admin tüm değerlendirmeleri listeler
+ */
+export async function adminListAllReviews() {
+  try {
+    await requireRole("ADMIN");
+
+    const reviews = await prisma.review.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      include: {
+        reviewer: {
+          include: {
+            companyProfile: true,
+          },
+        },
+        reviewed: true,
         job: {
-          companyId: session.user.companyProfileId,
+          select: {
+            id: true,
+            title: true,
+          },
         },
       },
     });
 
-    if (!acceptedBid) {
-      return { canReview: false };
-    }
-
-    // Check if review already exists
-    const existingReview = await prisma.review.findFirst({
-      where: {
-        contractorId,
-        companyId: session.user.companyProfileId,
-        jobId,
-      },
-    });
-
-    return { canReview: !existingReview };
+    return { reviews };
   } catch (error) {
-    console.error("Can review error:", error);
-    return { canReview: false };
+    console.error("Admin list reviews error:", error);
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: "Değerlendirmeler yüklenirken hata oluştu" };
   }
 }

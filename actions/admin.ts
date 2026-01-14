@@ -256,3 +256,142 @@ export async function adminDeleteReview(reviewId: string) {
     return { error: "Yorum silinirken bir hata oluştu" };
   }
 }
+
+/**
+ * Admin: Onay bekleyen ilanları listeler
+ */
+export async function adminListPendingJobs() {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user || session.user.role !== "ADMIN") {
+      return { error: "Bu işlem için admin yetkisi gerekli" };
+    }
+
+    const jobs = await prisma.jobPost.findMany({
+      where: {
+        approvalStatus: "PENDING_APPROVAL",
+        isDeleted: false,
+      },
+      include: {
+        createdBy: {
+          select: {
+            email: true,
+            contractorProfile: {
+              select: {
+                displayName: true,
+                city: true,
+                phone: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "asc" }, // En eski önce
+    });
+
+    return { jobs };
+  } catch (error) {
+    console.error("Admin list pending jobs error:", error);
+    return { error: "İlanlar yüklenirken bir hata oluştu" };
+  }
+}
+
+/**
+ * Admin: İlanı onayla ve yayına al
+ */
+export async function adminApproveJob(jobId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user || session.user.role !== "ADMIN") {
+      return { error: "Bu işlem için admin yetkisi gerekli" };
+    }
+
+    const job = await prisma.jobPost.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!job) {
+      return { error: "İlan bulunamadı" };
+    }
+
+    if (job.approvalStatus !== "PENDING_APPROVAL") {
+      return { error: "Bu ilan onay beklemede değil" };
+    }
+
+    await prisma.jobPost.update({
+      where: { id: jobId },
+      data: {
+        approvalStatus: "APPROVED",
+        publishedAt: new Date(),
+        approvedAt: new Date(),
+        approvedById: session.user.id,
+        rejectedAt: null,
+        rejectedById: null,
+        rejectionReason: null,
+      },
+    });
+
+    revalidatePath("/admin/approvals");
+    revalidatePath("/admin/ilan-onay");
+    revalidatePath("/ilanlar");
+    revalidatePath("/");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Admin approve job error:", error);
+    return { error: "İlan onaylanırken bir hata oluştu" };
+  }
+}
+
+/**
+ * Admin: İlanı reddet (sebep zorunlu)
+ */
+export async function adminRejectJob(jobId: string, reason: string) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user || session.user.role !== "ADMIN") {
+      return { error: "Bu işlem için admin yetkisi gerekli" };
+    }
+
+    if (!reason || reason.trim().length < 10) {
+      return { error: "Red sebebi en az 10 karakter olmalıdır" };
+    }
+
+    const job = await prisma.jobPost.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!job) {
+      return { error: "İlan bulunamadı" };
+    }
+
+    if (job.approvalStatus !== "PENDING_APPROVAL") {
+      return { error: "Bu ilan onay beklemede değil" };
+    }
+
+    await prisma.jobPost.update({
+      where: { id: jobId },
+      data: {
+        approvalStatus: "REJECTED",
+        rejectedAt: new Date(),
+        rejectedById: session.user.id,
+        rejectionReason: reason.trim(),
+        approvedAt: null,
+        approvedById: null,
+        publishedAt: null,
+      },
+    });
+
+    revalidatePath("/admin/approvals");
+    revalidatePath("/admin/ilan-onay");
+    revalidatePath("/dashboard/taseron/ilanlar");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Admin reject job error:", error);
+    return { error: "İlan reddedilirken bir hata oluştu" };
+  }
+}

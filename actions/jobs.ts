@@ -1,8 +1,9 @@
 "use server";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
+import { Category, JobStatus, ApprovalStatus, Role } from "@prisma/client";
 import prisma from "@/lib/db";
+import { requireAuth, requireRole } from "@/lib/auth";
 import {
   jobPostCreateSchema,
   jobPostUpdateSchema,
@@ -11,47 +12,202 @@ import {
   type JobPostUpdateInput,
   type AdminRejectInput,
 } from "@/lib/validators";
-import { revalidatePath } from "next/cache";
-import { Category, JobStatus, ApprovalStatus } from "@prisma/client";
+
+// ============ PUBLIC ACTIONS ============
+
+/**
+ * Public olarak onaylanmış ilanları listeler (filtreleme ile)
+ */
+export async function listApprovedJobs(filters?: {
+  search?: string;
+  category?: Category;
+  city?: string;
+  budgetMin?: number;
+  budgetMax?: number;
+  sortBy?: "newest" | "oldest" | "budget_low" | "budget_high";
+  page?: number;
+  pageSize?: number;
+}) {
+  try {
+    const {
+      search,
+      category,
+      city,
+      budgetMin,
+      budgetMax,
+      sortBy = "newest",
+      page = 1,
+      pageSize = 12,
+    } = filters || {};
+
+    const where: any = {
+      approvalStatus: "APPROVED",
+      status: "OPEN",
+      isDeleted: false,
+    };
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    if (category) {
+      where.category = category;
+    }
+
+    if (city) {
+      where.city = { contains: city, mode: "insensitive" };
+    }
+
+    if (budgetMin !== undefined || budgetMax !== undefined) {
+      where.budgetMin = {};
+      if (budgetMin) where.budgetMin.gte = budgetMin;
+      if (budgetMax) where.budgetMax = { lte: budgetMax };
+    }
+
+    let orderBy: any = { createdAt: "desc" };
+    if (sortBy === "oldest") orderBy = { createdAt: "asc" };
+    if (sortBy === "budget_low") orderBy = { budgetMin: "asc" };
+    if (sortBy === "budget_high") orderBy = { budgetMax: "desc" };
+
+    const [jobs, total] = await Promise.all([
+      prisma.jobPost.findMany({
+        where,
+        orderBy,
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: {
+          company: {
+            include: {
+              user: {
+                include: {
+                  contractorProfile: {
+                    select: { displayName: true, city: true },
+                  },
+                },
+              },
+            },
+          },
+          _count: {
+            select: { bids: true },
+          },
+        },
+      }),
+      prisma.jobPost.count({ where }),
+    ]);
+
+    return {
+      jobs,
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      },
+    };
+  } catch (error) {
+    console.error("List approved jobs error:", error);
+    throw new Error("İlanlar yüklenirken hata oluştu");
+  }
+}
+
+/**
+ * Public ilan detayını getirir (sadece APPROVED)
+ */
+export async function getApprovedJobById(jobId: string) {
+  try {
+    const job = await prisma.jobPost.findFirst({
+      where: {
+        id: jobId,
+        approvalStatus: "APPROVED",
+        isDeleted: false,
+      },
+      include: {
+        company: {
+          include: {
+            user: {
+              include: {
+                contractorProfile: true,
+              },
+            },
+          },
+        },
+        createdBy: {
+          include: {
+            contractorProfile: true,
+          },
+        },
+        _count: {
+          select: { bids: true },
+        },
+      },
+    });
+
+    if (!job) {
+      return { error: "İlan bulunamadı" };
+    }
+
+    return { job };
+  } catch (error) {
+    console.error("Get job error:", error);
+    return { error: "İlan detayı yüklenirken hata oluştu" };
+  }
+}
+
+/**
+ * İlan görüntüleme sayacını artırır
+ */
+export async function incrementJobView(jobId: string) {
+  try {
+    await prisma.jobPost.update({
+      where: { id: jobId },
+      data: {
+        viewsCount: {
+          increment: 1,
+        },
+      },
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Increment view error:", error);
+    return { error: "View sayacı güncellenemedi" };
+  }
+}
 
 // ============ TAŞERON ACTIONS ============
 
 /**
- * Taşeron için yeni ilan oluşturur (DRAFT durumunda)
+ * Taşeron için yeni taslak ilan oluşturur
  */
 export async function createJobDraft(data: JobPostCreateInput) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await requireRole("TASERON");
 
-    if (!session?.user || session.user.role !== "TASERON") {
-      return { error: "Bu işlem için taşeron hesabı gerekli" };
-    }
-
-    if (!session.user.contractorProfileId) {
-      return { error: "Taşeron profili bulunamadı" };
-    }
-
+    // Validation
     const validatedData = jobPostCreateSchema.parse(data);
 
-    // Taşeron için CompanyProfile kontrol/oluşturma
-    let companyId = session.user.companyProfileId;
+    // CompanyProfile kontrolü (taşeron kendi adına ilan açar)
+    let companyId = user.companyProfileId;
     
     if (!companyId) {
-      const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
+      const userProfile = await prisma.user.findUnique({
+        where: { id: user.id },
         include: { contractorProfile: true },
       });
 
-      if (!user?.contractorProfile) {
+      if (!userProfile?.contractorProfile) {
         return { error: "Profil bilgisi bulunamadı" };
       }
 
+      // Otomatik company profile oluştur
       const companyProfile = await prisma.companyProfile.create({
         data: {
-          userId: session.user.id,
-          companyName: user.contractorProfile.displayName,
-          city: user.contractorProfile.city,
-          phone: user.contractorProfile.phone || "",
+          userId: user.id,
+          companyName: userProfile.contractorProfile.displayName,
+          city: userProfile.contractorProfile.city,
+          phone: userProfile.contractorProfile.phone || "",
         },
       });
       companyId = companyProfile.id;
@@ -59,53 +215,57 @@ export async function createJobDraft(data: JobPostCreateInput) {
 
     const job = await prisma.jobPost.create({
       data: {
-        companyId: companyId,
-        createdById: session.user.id,
+        companyId,
+        createdById: user.id,
         createdByRole: "TASERON",
         title: validatedData.title,
         description: validatedData.description,
         city: validatedData.city,
         category: validatedData.category as Category,
-        budgetMin: validatedData.budgetMin || null,
-        budgetMax: validatedData.budgetMax || null,
-        durationText: validatedData.durationText || null,
-        contactPhone: validatedData.contactPhone || null,
-        contactEmail: validatedData.contactEmail || null,
+        budgetMin: validatedData.budgetMin,
+        budgetMax: validatedData.budgetMax,
+        durationText: validatedData.durationText,
+        contactPhone: validatedData.contactPhone,
+        contactEmail: validatedData.contactEmail,
         status: "OPEN",
         approvalStatus: "DRAFT",
       },
     });
 
     revalidatePath("/dashboard/taseron/ilanlar");
-
     return { success: true, jobId: job.id };
   } catch (error) {
     console.error("Create job draft error:", error);
     if (error instanceof Error) {
       return { error: error.message };
     }
-    return { error: "İlan taslağı oluşturulurken bir hata oluştu" };
+    return { error: "İlan oluşturulurken hata oluştu" };
   }
 }
 
 /**
- * Firma için direkt onaylanmış ilan oluşturur (admin onayı gerekmez)
+ * Taşeron taslak ilanını günceller
  */
-export async function createJob(data: JobPostCreateInput) {
+export async function updateJobDraft(jobId: string, data: JobPostUpdateInput) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await requireRole("TASERON");
+    const validatedData = jobPostUpdateSchema.parse(data);
 
-    if (!session?.user || session.user.role !== "FIRMA") {
-      return { error: "Bu işlem için firma hesabı gerekli" };
+    // İlan sahibi kontrolü
+    const job = await prisma.jobPost.findFirst({
+      where: {
+        id: jobId,
+        createdById: user.id,
+        approvalStatus: { in: ["DRAFT", "REJECTED"] },
+      },
+    });
+
+    if (!job) {
+      return { error: "İlan bulunamadı veya düzenlenemez" };
     }
 
-    if (!session.user.companyProfileId) {
-      return { error: "Firma profili bulunamadı" };
-    }
-
-    const validatedData = jobPostCreateSchema.parse(data);
-
-    const job = await prisma.jobPost.create({
+    await prisma.jobPost.update({
+      where: { id: jobId },
       data: {
         title: validatedData.title,
         description: validatedData.description,
@@ -116,49 +276,38 @@ export async function createJob(data: JobPostCreateInput) {
         durationText: validatedData.durationText,
         contactPhone: validatedData.contactPhone,
         contactEmail: validatedData.contactEmail,
-        companyId: session.user.companyProfileId,
-        createdById: session.user.id,
-        status: "OPEN" as JobStatus,
-        approvalStatus: "APPROVED" as ApprovalStatus,
       },
     });
 
-    revalidatePath("/dashboard/firma");
-    revalidatePath("/ilanlar");
-
-    return { success: true, jobId: job.id };
+    revalidatePath("/dashboard/taseron/ilanlar");
+    revalidatePath(`/dashboard/taseron/ilanlar/${jobId}/duzenle`);
+    return { success: true };
   } catch (error) {
-    console.error("Create job error:", error);
-    return { error: "İlan oluşturulurken bir hata oluştu" };
+    console.error("Update job error:", error);
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: "İlan güncellenirken hata oluştu" };
   }
 }
 
 /**
- * Taşeron ilanını DRAFT/REJECTED durumundan PENDING_APPROVAL'a gönderir
+ * İlanı onaya gönderir (DRAFT/REJECTED → PENDING_APPROVAL)
  */
 export async function submitJobForApproval(jobId: string) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user || session.user.role !== "TASERON") {
-      return { error: "Bu işlem için taşeron hesabı gerekli" };
-    }
+    const user = await requireRole("TASERON");
 
     const job = await prisma.jobPost.findFirst({
       where: {
         id: jobId,
-        createdById: session.user.id,
+        createdById: user.id,
+        approvalStatus: { in: ["DRAFT", "REJECTED"] },
       },
     });
 
     if (!job) {
-      return { error: "İlan bulunamadı veya yetkiniz yok" };
-    }
-
-    if (job.approvalStatus !== "DRAFT" && job.approvalStatus !== "REJECTED") {
-      return {
-        error: "Sadece taslak veya reddedilen ilanlar onaya gönderilebilir",
-      };
+      return { error: "İlan bulunamadı" };
     }
 
     await prisma.jobPost.update({
@@ -172,121 +321,64 @@ export async function submitJobForApproval(jobId: string) {
     });
 
     revalidatePath("/dashboard/taseron/ilanlar");
-    revalidatePath("/admin/ilan-onay");
-
+    revalidatePath("/admin/approvals");
     return { success: true };
   } catch (error) {
-    console.error("Submit job for approval error:", error);
-    return { error: "İlan onaya gönderilirken bir hata oluştu" };
+    console.error("Submit for approval error:", error);
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: "İlan onaya gönderilirken hata oluştu" };
   }
 }
 
 /**
- * Taşeron kendi ilanını günceller (sadece DRAFT veya REJECTED durumunda)
+ * Taşeron kendi ilanlarını duruma göre listeler
  */
-export async function updateJobDraft(
-  jobId: string,
-  data: JobPostUpdateInput
-) {
+export async function listMyJobsByApprovalStatus(status?: ApprovalStatus) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await requireRole("TASERON");
 
-    if (!session?.user || session.user.role !== "TASERON") {
-      return { error: "Bu işlem için taşeron hesabı gerekli" };
-    }
+    const where: any = {
+      createdById: user.id,
+      isDeleted: false,
+    };
 
-    const job = await prisma.jobPost.findFirst({
-      where: {
-        id: jobId,
-        createdById: session.user.id,
-      },
-    });
-
-    if (!job) {
-      return { error: "İlan bulunamadı veya yetkiniz yok" };
-    }
-
-    if (job.approvalStatus !== "DRAFT" && job.approvalStatus !== "REJECTED") {
-      return { error: "Sadece taslak veya reddedilen ilanlar düzenlenebilir" };
-    }
-
-    const validatedData = jobPostUpdateSchema.parse(data);
-
-    await prisma.jobPost.update({
-      where: { id: jobId },
-      data: {
-        title: validatedData.title,
-        description: validatedData.description,
-        city: validatedData.city,
-        category: validatedData.category as Category,
-        budgetMin: validatedData.budgetMin || null,
-        budgetMax: validatedData.budgetMax || null,
-        durationText: validatedData.durationText || null,
-        contactPhone: validatedData.contactPhone || null,
-        contactEmail: validatedData.contactEmail || null,
-      },
-    });
-
-    revalidatePath("/dashboard/taseron/ilanlar");
-    revalidatePath(`/dashboard/taseron/ilanlar/${jobId}/duzenle`);
-
-    return { success: true };
-  } catch (error) {
-    console.error("Update job draft error:", error);
-    return { error: "İlan güncellenirken bir hata oluştu" };
-  }
-}
-
-/**
- * Taşeron kendi ilanlarını onay durumuna göre listeler
- */
-export async function listMyJobsByApprovalStatus(
-  status?: ApprovalStatus | "ALL"
-) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user || session.user.role !== "TASERON") {
-      return { error: "Bu işlem için taşeron hesabı gerekli" };
+    if (status) {
+      where.approvalStatus = status;
     }
 
     const jobs = await prisma.jobPost.findMany({
-      where: {
-        createdById: session.user.id,
-        isDeleted: false,
-        ...(status && status !== "ALL" && { approvalStatus: status }),
-      },
+      where,
+      orderBy: { createdAt: "desc" },
       include: {
         _count: {
           select: { bids: true },
         },
       },
-      orderBy: { createdAt: "desc" },
     });
 
     return { jobs };
   } catch (error) {
     console.error("List my jobs error:", error);
-    return { error: "İlanlar yüklenirken bir hata oluştu" };
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: "İlanlar yüklenirken hata oluştu" };
   }
 }
 
 /**
- * Taşeron kendi ilanının detayını alır
+ * Taşeron kendi ilan detayını getirir
  */
 export async function getMyJobById(jobId: string) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user || session.user.role !== "TASERON") {
-      return { error: "Bu işlem için taşeron hesabı gerekli" };
-    }
+    const user = await requireRole("TASERON");
 
     const job = await prisma.jobPost.findFirst({
       where: {
         id: jobId,
-        createdById: session.user.id,
-        isDeleted: false,
+        createdById: user.id,
       },
       include: {
         _count: {
@@ -302,220 +394,63 @@ export async function getMyJobById(jobId: string) {
     return { job };
   } catch (error) {
     console.error("Get my job error:", error);
-    return { error: "İlan yüklenirken bir hata oluştu" };
-  }
-}
-
-// ============ FIRMA ACTIONS ============
-
-/**
- * Firma için onaylanmış ilanları listeler (tüm kullanıcılar tarafından erişilebilir)
- */
-export async function listApprovedJobs(filters?: {
-  city?: string;
-  category?: string;
-  search?: string;
-  budgetMin?: number;
-  budgetMax?: number;
-}) {
-  try {
-    const jobs = await prisma.jobPost.findMany({
-      where: {
-        isDeleted: false,
-        status: "OPEN",
-        approvalStatus: "APPROVED",
-        ...(filters?.city && { city: filters.city }),
-        ...(filters?.category && { category: filters.category as Category }),
-        ...(filters?.budgetMin && { budgetMin: { gte: filters.budgetMin } }),
-        ...(filters?.budgetMax && { budgetMax: { lte: filters.budgetMax } }),
-        ...(filters?.search && {
-          OR: [
-            { title: { contains: filters.search, mode: "insensitive" } },
-            { description: { contains: filters.search, mode: "insensitive" } },
-          ],
-        }),
-      },
-      include: {
-        company: {
-          select: {
-            id: true,
-            companyName: true,
-            city: true,
-          },
-        },
-        _count: {
-          select: { bids: true },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return { jobs };
-  } catch (error) {
-    console.error("List approved jobs error:", error);
-    return { error: "İlanlar yüklenirken bir hata oluştu" };
-  }
-}
-
-/**
- * İlan detayını getirir (sadece APPROVED ilanlar veya kendi ilanları)
- */
-export async function getJobById(jobId: string) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    const job = await prisma.jobPost.findFirst({
-      where: {
-        id: jobId,
-        isDeleted: false,
-      },
-      include: {
-        company: {
-          select: {
-            id: true,
-            companyName: true,
-            city: true,
-            phone: true,
-            about: true,
-            userId: true,
-          },
-        },
-        createdBy: {
-          select: {
-            id: true,
-            email: true,
-            role: true,
-          },
-        },
-        _count: {
-          select: { bids: true },
-        },
-      },
-    });
-
-    if (!job) {
-      return { error: "İlan bulunamadı" };
+    if (error instanceof Error) {
+      return { error: error.message };
     }
-
-    // Eğer APPROVED değilse, sadece owner veya admin görebilir
-    if (job.approvalStatus !== "APPROVED") {
-      if (
-        !session?.user ||
-        (session.user.id !== job.createdById && session.user.role !== "ADMIN")
-      ) {
-        return { error: "Bu ilana erişim yetkiniz yok" };
-      }
-    }
-
-    return { job };
-  } catch (error) {
-    console.error("Get job error:", error);
-    return { error: "İlan yüklenirken bir hata oluştu" };
+    return { error: "İlan yüklenirken hata oluştu" };
   }
 }
 
 // ============ ADMIN ACTIONS ============
 
 /**
- * Admin için onay bekleyen ilanları listeler
+ * Admin onay bekleyen ilanları listeler
  */
-export async function adminListPendingJobs(filters?: {
-  city?: string;
-  category?: string;
-  search?: string;
-}) {
+export async function adminListPendingJobs() {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return { error: "Bu işlem için admin hesabı gerekli" };
-    }
+    await requireRole("ADMIN");
 
     const jobs = await prisma.jobPost.findMany({
       where: {
-        isDeleted: false,
         approvalStatus: "PENDING_APPROVAL",
-        ...(filters?.city && { city: filters.city }),
-        ...(filters?.category && { category: filters.category as Category }),
-        ...(filters?.search && {
-          OR: [
-            { title: { contains: filters.search, mode: "insensitive" } },
-            { description: { contains: filters.search, mode: "insensitive" } },
-          ],
-        }),
+        isDeleted: false,
       },
+      orderBy: { createdAt: "asc" },
       include: {
         createdBy: {
-          select: {
-            id: true,
-            email: true,
-            role: true,
-            contractorProfile: {
-              select: {
-                displayName: true,
-                city: true,
-              },
-            },
-          },
-        },
-        company: {
-          select: {
-            companyName: true,
+          include: {
+            contractorProfile: true,
           },
         },
       },
-      orderBy: { createdAt: "asc" }, // En eski ilk
     });
 
     return { jobs };
   } catch (error) {
     console.error("Admin list pending jobs error:", error);
-    return { error: "İlanlar yüklenirken bir hata oluştu" };
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: "Onay bekleyen ilanlar yüklenirken hata oluştu" };
   }
 }
 
 /**
- * Admin için onay bekleyen ilanın detayını getirir
+ * Admin ilan detayını getirir
  */
 export async function adminGetJobById(jobId: string) {
   try {
-    const session = await getServerSession(authOptions);
+    await requireRole("ADMIN");
 
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return { error: "Bu işlem için admin hesabı gerekli" };
-    }
-
-    const job = await prisma.jobPost.findFirst({
-      where: {
-        id: jobId,
-        isDeleted: false,
-      },
+    const job = await prisma.jobPost.findUnique({
+      where: { id: jobId },
       include: {
-        company: {
-          select: {
-            id: true,
-            companyName: true,
-            city: true,
-            phone: true,
-            about: true,
-          },
-        },
         createdBy: {
-          select: {
-            id: true,
-            email: true,
-            role: true,
-            contractorProfile: {
-              select: {
-                displayName: true,
-                city: true,
-                phone: true,
-                skills: true,
-                experienceYears: true,
-              },
-            },
+          include: {
+            contractorProfile: true,
           },
         },
+        company: true,
         _count: {
           select: { bids: true },
         },
@@ -529,7 +464,10 @@ export async function adminGetJobById(jobId: string) {
     return { job };
   } catch (error) {
     console.error("Admin get job error:", error);
-    return { error: "İlan yüklenirken bir hata oluştu" };
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: "İlan yüklenirken hata oluştu" };
   }
 }
 
@@ -538,11 +476,7 @@ export async function adminGetJobById(jobId: string) {
  */
 export async function adminApproveJob(jobId: string) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return { error: "Bu işlem için admin hesabı gerekli" };
-    }
+    const user = await requireRole("ADMIN");
 
     const job = await prisma.jobPost.findUnique({
       where: { id: jobId },
@@ -561,36 +495,30 @@ export async function adminApproveJob(jobId: string) {
       data: {
         approvalStatus: "APPROVED",
         approvedAt: new Date(),
-        approvedById: session.user.id,
-        rejectedAt: null,
-        rejectedById: null,
-        rejectionReason: null,
+        approvedById: user.id,
+        publishedAt: new Date(),
       },
     });
 
-    revalidatePath("/admin/ilan-onay");
+    revalidatePath("/admin/approvals");
     revalidatePath("/ilanlar");
-    revalidatePath(`/ilan/${jobId}`);
-
     return { success: true };
   } catch (error) {
     console.error("Admin approve job error:", error);
-    return { error: "İlan onaylanırken bir hata oluştu" };
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: "İlan onaylanırken hata oluştu" };
   }
 }
 
 /**
  * Admin ilanı reddeder (sebep zorunlu)
  */
-export async function adminRejectJob(jobId: string, rejectData: AdminRejectInput) {
+export async function adminRejectJob(jobId: string, data: AdminRejectInput) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return { error: "Bu işlem için admin hesabı gerekli" };
-    }
-
-    const validatedData = adminRejectSchema.parse(rejectData);
+    const user = await requireRole("ADMIN");
+    const validatedData = adminRejectSchema.parse(data);
 
     const job = await prisma.jobPost.findUnique({
       where: { id: jobId },
@@ -600,149 +528,157 @@ export async function adminRejectJob(jobId: string, rejectData: AdminRejectInput
       return { error: "İlan bulunamadı" };
     }
 
-    if (job.approvalStatus !== "PENDING_APPROVAL") {
-      return { error: "Bu ilan onay beklemede değil" };
-    }
-
     await prisma.jobPost.update({
       where: { id: jobId },
       data: {
         approvalStatus: "REJECTED",
         rejectedAt: new Date(),
-        rejectedById: session.user.id,
+        rejectedById: user.id,
         rejectionReason: validatedData.reason,
-        approvedAt: null,
-        approvedById: null,
       },
     });
 
-    revalidatePath("/admin/ilan-onay");
-    revalidatePath(`/ilan/${jobId}`);
-
+    revalidatePath("/admin/approvals");
     return { success: true };
   } catch (error) {
     console.error("Admin reject job error:", error);
     if (error instanceof Error) {
       return { error: error.message };
     }
-    return { error: "İlan reddedilirken bir hata oluştu" };
+    return { error: "İlan reddedilirken hata oluştu" };
   }
 }
 
 /**
- * Admin onaylı ilanı yayından kaldırır
+ * Admin tüm ilanları listeler (filtre ile)
+ */
+export async function adminListAllJobs(filters?: {
+  approvalStatus?: ApprovalStatus;
+  status?: JobStatus;
+  search?: string;
+}) {
+  try {
+    await requireRole("ADMIN");
+
+    const where: any = {
+      isDeleted: false,
+    };
+
+    if (filters?.approvalStatus) {
+      where.approvalStatus = filters.approvalStatus;
+    }
+
+    if (filters?.status) {
+      where.status = filters.status;
+    }
+
+    if (filters?.search) {
+      where.OR = [
+        { title: { contains: filters.search, mode: "insensitive" } },
+        { description: { contains: filters.search, mode: "insensitive" } },
+      ];
+    }
+
+    const jobs = await prisma.jobPost.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      include: {
+        createdBy: {
+          include: {
+            contractorProfile: true,
+            companyProfile: true,
+          },
+        },
+        _count: {
+          select: { bids: true },
+        },
+      },
+    });
+
+    return { jobs };
+  } catch (error) {
+    console.error("Admin list all jobs error:", error);
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: "İlanlar yüklenirken hata oluştu" };
+  }
+}
+
+/**
+ * Admin ilanı yayından kaldırır
  */
 export async function adminUnpublishJob(jobId: string, reason?: string) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return { error: "Bu işlem için admin hesabı gerekli" };
-    }
-
-    const job = await prisma.jobPost.findUnique({
-      where: { id: jobId },
-    });
-
-    if (!job) {
-      return { error: "İlan bulunamadı" };
-    }
+    const user = await requireRole("ADMIN");
 
     await prisma.jobPost.update({
       where: { id: jobId },
       data: {
         approvalStatus: "REJECTED",
-        rejectedAt: new Date(),
-        rejectedById: session.user.id,
-        rejectionReason: reason || "Admin tarafından yayından kaldırıldı",
         status: "CLOSED",
+        rejectedAt: new Date(),
+        rejectedById: user.id,
+        rejectionReason: reason || "Admin tarafından yayından kaldırıldı",
       },
     });
 
-    revalidatePath("/admin/ilan-onay");
     revalidatePath("/admin/jobs");
     revalidatePath("/ilanlar");
-    revalidatePath(`/ilan/${jobId}`);
-
     return { success: true };
   } catch (error) {
     console.error("Admin unpublish job error:", error);
-    return { error: "İlan yayından kaldırılırken bir hata oluştu" };
-  }
-}
-
-// ============ LEGACY COMPATIBILITY ============
-
-/**
- * İlan durumunu aç/kapa (OPEN/CLOSED)
- */
-export async function toggleJobStatus(jobId: string) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
-      return { error: "Oturum bulunamadı" };
+    if (error instanceof Error) {
+      return { error: error.message };
     }
-
-    const job = await prisma.jobPost.findUnique({
-      where: { id: jobId },
-    });
-
-    if (!job) {
-      return { error: "İlan bulunamadı" };
-    }
-
-    // Sadece kendi ilanını veya admin değiştirebilir
-    if (job.createdById !== session.user.id && session.user.role !== "ADMIN") {
-      return { error: "Bu işlem için yetkiniz yok" };
-    }
-
-    const newStatus: JobStatus = job.status === "OPEN" ? "CLOSED" : "OPEN";
-
-    await prisma.jobPost.update({
-      where: { id: jobId },
-      data: { status: newStatus },
-    });
-
-    revalidatePath("/dashboard/firma");
-    revalidatePath("/dashboard/taseron/ilanlar");
-    revalidatePath("/admin/jobs");
-    revalidatePath(`/ilan/${jobId}`);
-
-    return { success: true, status: newStatus };
-  } catch (error) {
-    console.error("Toggle job status error:", error);
-    return { error: "Durum değiştirilirken bir hata oluştu" };
+    return { error: "İlan yayından kaldırılırken hata oluştu" };
   }
 }
 
 /**
- * Firma kendi ilanlarını listeler
+ * Admin dashboard istatistikleri
  */
-export async function getMyJobs() {
+export async function getAdminDashboardStats() {
   try {
-    const session = await getServerSession(authOptions);
+    await requireRole("ADMIN");
 
-    if (!session?.user) {
-      return { error: "Oturum bulunamadı" };
-    }
-
-    const jobs = await prisma.jobPost.findMany({
-      where: {
-        createdById: session.user.id,
-        isDeleted: false,
-      },
-      include: {
-        _count: {
-          select: { bids: true },
+    const [
+      totalUsers,
+      totalJobs,
+      pendingJobs,
+      approvedJobs,
+      todayApprovals,
+    ] = await Promise.all([
+      prisma.user.count(),
+      prisma.jobPost.count({ where: { isDeleted: false } }),
+      prisma.jobPost.count({
+        where: { approvalStatus: "PENDING_APPROVAL", isDeleted: false },
+      }),
+      prisma.jobPost.count({
+        where: { approvalStatus: "APPROVED", isDeleted: false },
+      }),
+      prisma.jobPost.count({
+        where: {
+          approvalStatus: "APPROVED",
+          approvedAt: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0)),
+          },
         },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+      }),
+    ]);
 
-    return { jobs };
+    return {
+      totalUsers,
+      totalJobs,
+      pendingJobs,
+      approvedJobs,
+      todayApprovals,
+    };
   } catch (error) {
-    console.error("Get my jobs error:", error);
-    return { error: "İlanlar yüklenirken bir hata oluştu" };
+    console.error("Get admin stats error:", error);
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: "İstatistikler yüklenirken hata oluştu" };
   }
 }

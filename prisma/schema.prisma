@@ -62,6 +62,8 @@ model User {
   createdJobs       JobPost[]       @relation("CreatedJobs")
   approvedJobs      JobPost[]       @relation("ApprovedJobs")
   rejectedJobs      JobPost[]       @relation("RejectedJobs")
+  offeredBids       Bid[]           @relation("OfferedBids")
+  givenReviews      Review[]        @relation("GivenReviews")
 }
 
 // Company Profile (Firma)
@@ -76,9 +78,8 @@ model CompanyProfile {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobs    JobPost[]
-  reviews Review[]
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs JobPost[]
 }
 
 // Contractor Profile (Taşeron)
@@ -95,7 +96,6 @@ model ContractorProfile {
   updatedAt       DateTime @updatedAt
 
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bids    Bid[]
   reviews Review[]
 }
 
@@ -114,6 +114,7 @@ model JobPost {
   contactEmail String?
   status       JobStatus @default(OPEN)
   isDeleted    Boolean   @default(false)
+  viewsCount   Int       @default(0)
   
   // Moderation/Approval fields
   approvalStatus  ApprovalStatus @default(DRAFT)
@@ -129,6 +130,8 @@ model JobPost {
   rejectedBy      User?          @relation("RejectedJobs", fields: [rejectedById], references: [id], onDelete: SetNull)
   rejectionReason String?
   
+  publishedAt  DateTime?
+  
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -138,11 +141,12 @@ model JobPost {
   reviews   Review[]
 }
 
-// Bid (Teklif)
+// Bid (Teklif) - Firma taşeron ilanına teklif verir
 model Bid {
   id                String    @id @default(uuid())
   jobId             String
-  contractorId      String
+  offererId         String?   // FIRMA userId (teklif veren) - optional during migration
+  contractorId      String    // DEPRECATED: geriye uyumluluk için
   message           String
   proposedPrice     Int?
   estimatedDuration String?
@@ -150,23 +154,23 @@ model Bid {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  job        JobPost           @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  contractor ContractorProfile @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  job     JobPost @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  offerer User?   @relation("OfferedBids", fields: [offererId], references: [id], onDelete: Cascade)
 
   @@unique([jobId, contractorId])
 }
 
-// Review (Yorum)
+// Review (Yorum) - Firma taşerona yorum yapar
 model Review {
   id           String   @id @default(uuid())
-  contractorId String
-  companyId    String
+  reviewerId   String?  // FIRMA userId - optional during migration
+  reviewedId   String?  // TASERON userId - optional during migration
   jobId        String?
   rating       Int      @db.SmallInt
   comment      String?
   createdAt    DateTime @default(now())
 
-  contractor ContractorProfile @relation(fields: [contractorId], references: [id], onDelete: Cascade)
-  company    CompanyProfile    @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  job        JobPost?          @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  reviewer User?              @relation("GivenReviews", fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewed ContractorProfile? @relation(fields: [reviewedId], references: [userId], onDelete: Cascade)
+  job      JobPost?           @relation(fields: [jobId], references: [id], onDelete: SetNull)
 }

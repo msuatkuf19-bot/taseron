@@ -1,7 +1,9 @@
 import { NextAuthOptions } from "next-auth";
+import { getServerSession } from "next-auth/next";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/db";
+import { Role } from "@prisma/client";
 
 export const authOptions: NextAuthOptions = {
   session: {
@@ -79,3 +81,28 @@ export const authOptions: NextAuthOptions = {
     },
   },
 };
+
+// Helper fonksiyonlar
+export async function getSessionUser() {
+  const session = await getServerSession(authOptions);
+  return session?.user || null;
+}
+
+export async function requireAuth() {
+  const user = await getSessionUser();
+  if (!user) {
+    throw new Error("Giriş yapmanız gerekiyor");
+  }
+  return user;
+}
+
+export async function requireRole(allowedRoles: Role | Role[]) {
+  const user = await requireAuth();
+  const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
+  
+  if (!roles.includes(user.role as Role)) {
+    throw new Error("Bu işlem için yetkiniz yok");
+  }
+  
+  return user;
+}

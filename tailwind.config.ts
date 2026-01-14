@@ -20,11 +20,12 @@ const config: Config = {
     extend: {
       colors: {
         // Taşeroncum Brand Colors
-        'primary-orange': '#F97316',
-        'dark-bg': '#1F1F1F',
+        'primary-orange': '#F37021',
+        'primary-orange-dark': '#D85F17',
+        'dark-bg': '#2E2E2E',
         'soft-dark': '#2A2A2A',
-        'light-gray-bg': '#F7F7F7',
-        'text-primary': '#111827',
+        'light-gray-bg': '#F5F5F5',
+        'text-primary': '#2E2E2E',
         'text-secondary': '#6B7280',
         'success-green': '#22C55E',
         'warning-yellow': '#FACC15',
@@ -32,13 +33,13 @@ const config: Config = {
         
         border: "#E5E7EB",
         input: "#E5E7EB",
-        ring: "#F97316",
-        background: "#F7F7F7",
-        foreground: "#111827",
+        ring: "#F37021",
+        background: "#F5F5F5",
+        foreground: "#2E2E2E",
         primary: {
-          DEFAULT: "#F97316",
+          DEFAULT: "#F37021",
           foreground: "#FFFFFF",
-          dark: "#EA580C",
+          dark: "#D85F17",
         },
         secondary: {
           DEFAULT: "#6B7280",
