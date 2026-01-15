@@ -177,7 +177,14 @@ export async function listBidsForMyJobs() {
             id: true,
             title: true,
             category: true,
+            city: true,
             status: true,
+            company: {
+              select: {
+                id: true,
+                companyName: true,
+              },
+            },
           },
         },
         offerer: {
@@ -347,6 +354,25 @@ export async function getBidById(bidId: string) {
     }
     return { error: "Teklif yüklenirken hata oluştu" };
   }
+}
+
+/**
+ * Alias: updateBidStatus - Firma teklifi kabul/reddeder
+ * Geriye uyumluluk için updateBidStatusByOwner'ın alias'ı
+ */
+export async function updateBidStatus(
+  bidId: string,
+  status: "ACCEPTED" | "REJECTED"
+) {
+  return updateBidStatusByOwner(bidId, status);
+}
+
+/**
+ * Alias: getMyBids - Taşeron için teklifleri listeler
+ * Taseron sayfalarında kullanılıyor - kendi ilanlarına gelen teklifler
+ */
+export async function getMyBids() {
+  return listBidsForMyJobs();
 }
 
 // ============ ADMIN ACTIONS ============

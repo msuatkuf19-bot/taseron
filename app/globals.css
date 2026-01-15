@@ -4,26 +4,45 @@
 
 @layer base {
   :root {
+    /* Background Colors */
     --background: 0 0% 96%;
     --foreground: 0 0% 18%;
     --card: 0 0% 100%;
     --card-foreground: 0 0% 18%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 18%;
+    
+    /* Primary & Accent */
     --primary: 21 90% 54%;
     --primary-foreground: 0 0% 100%;
     --secondary: 220 9% 46%;
     --secondary-foreground: 0 0% 100%;
-    --muted: 220 9% 46%;
-    --muted-foreground: 220 9% 46%;
     --accent: 21 90% 54%;
     --accent-foreground: 0 0% 100%;
+    
+    /* Muted */
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+    
+    /* Destructive */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
+    
+    /* UI Elements */
     --border: 220 13% 91%;
     --input: 220 13% 91%;
     --ring: 21 90% 54%;
     --radius: 0.5rem;
+
+    /* Semantic Text Colors */
+    --text-primary-light: #2E2E2E;
+    --text-secondary-light: #6B7280;
+    --text-muted-light: #9CA3AF;
+    
+    /* Dark Mode Text Colors (for dark backgrounds) */
+    --text-primary-dark: #F9FAFB;
+    --text-secondary-dark: #D1D5DB;
+    --text-muted-dark: #9CA3AF;
   }
 }
 
@@ -34,6 +53,34 @@
   body {
     @apply bg-background text-foreground;
     font-family: "Inter", system-ui, -apple-system, sans-serif;
+  }
+  
+  /* Ensure proper text contrast on dark backgrounds */
+  .dark-section {
+    --text-on-dark: #F9FAFB;
+    --text-secondary-on-dark: #D1D5DB;
+    --text-muted-on-dark: #9CA3AF;
+  }
+  
+  .dark-section,
+  .bg-dark-bg,
+  .bg-dark,
+  .bg-soft-dark,
+  [class*="bg-slate-9"],
+  [class*="bg-gray-9"],
+  [class*="bg-zinc-9"],
+  [class*="bg-neutral-9"] {
+    color: #F9FAFB;
+  }
+  
+  .dark-section p,
+  .dark-section span,
+  .dark-section label,
+  .bg-dark-bg p,
+  .bg-dark-bg span,
+  .bg-dark p,
+  .bg-dark span {
+    color: inherit;
   }
 }
 
@@ -68,4 +115,31 @@
 
 .star-rating .star.filled {
   color: #f37021;
+}
+
+/* Utility classes for text visibility */
+@layer utilities {
+  .text-on-dark {
+    color: #F9FAFB;
+  }
+  
+  .text-on-dark-secondary {
+    color: #D1D5DB;
+  }
+  
+  .text-on-dark-muted {
+    color: #9CA3AF;
+  }
+  
+  .text-on-light {
+    color: #2E2E2E;
+  }
+  
+  .text-on-light-secondary {
+    color: #6B7280;
+  }
+  
+  .text-on-light-muted {
+    color: #9CA3AF;
+  }
 }

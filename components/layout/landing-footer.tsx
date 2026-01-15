@@ -18,17 +18,17 @@ export function LandingFooter() {
                   className="w-full h-full object-cover"
                 />
               </div>
-              <span className="text-xl font-bold">
+              <span className="text-xl font-bold text-white">
                 Taşeroncum<span className="text-primary-orange">.com</span>
               </span>
             </Link>
-            <p className="text-text-secondary text-sm leading-relaxed">
+            <p className="text-gray-300 text-sm leading-relaxed">
               Türkiye'nin en güvenilir inşaat marketplace platformu. Firmalar ve taşeronları hızlıca buluşturan dijital çözüm.
             </p>
             <div className="flex gap-4">
               <a
                 href="#"
-                className="w-9 h-9 bg-soft-dark rounded-lg flex items-center justify-center hover:bg-primary-orange transition-colors"
+                className="w-9 h-9 bg-soft-dark rounded-lg flex items-center justify-center hover:bg-primary-orange transition-colors text-white"
                 aria-label="LinkedIn"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -37,7 +37,7 @@ export function LandingFooter() {
               </a>
               <a
                 href="#"
-                className="w-9 h-9 bg-soft-dark rounded-lg flex items-center justify-center hover:bg-primary-orange transition-colors"
+                className="w-9 h-9 bg-soft-dark rounded-lg flex items-center justify-center hover:bg-primary-orange transition-colors text-white"
                 aria-label="Instagram"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -46,7 +46,7 @@ export function LandingFooter() {
               </a>
               <a
                 href="#"
-                className="w-9 h-9 bg-soft-dark rounded-lg flex items-center justify-center hover:bg-primary-orange transition-colors"
+                className="w-9 h-9 bg-soft-dark rounded-lg flex items-center justify-center hover:bg-primary-orange transition-colors text-white"
                 aria-label="Twitter"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -58,12 +58,12 @@ export function LandingFooter() {
 
           {/* Hızlı Bağlantılar */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Hızlı Bağlantılar</h3>
+            <h3 className="text-lg font-semibold mb-4 text-white">Hızlı Bağlantılar</h3>
             <ul className="space-y-3">
               <li>
                 <Link
                   href="/register"
-                  className="text-text-secondary hover:text-primary-orange transition-colors text-sm"
+                  className="text-gray-300 hover:text-primary-orange transition-colors text-sm"
                 >
                   Kayıt Ol
                 </Link>
@@ -71,7 +71,7 @@ export function LandingFooter() {
               <li>
                 <Link
                   href="/login"
-                  className="text-text-secondary hover:text-primary-orange transition-colors text-sm"
+                  className="text-gray-300 hover:text-primary-orange transition-colors text-sm"
                 >
                   Giriş Yap
                 </Link>
@@ -79,7 +79,7 @@ export function LandingFooter() {
               <li>
                 <Link
                   href="/ilanlar"
-                  className="text-text-secondary hover:text-primary-orange transition-colors text-sm"
+                  className="text-gray-300 hover:text-primary-orange transition-colors text-sm"
                 >
                   İlanlar
                 </Link>
@@ -87,7 +87,7 @@ export function LandingFooter() {
               <li>
                 <a
                   href="#nasil-calisir"
-                  className="text-text-secondary hover:text-primary-orange transition-colors text-sm"
+                  className="text-gray-300 hover:text-primary-orange transition-colors text-sm"
                 >
                   Nasıl Çalışır
                 </a>
@@ -95,7 +95,7 @@ export function LandingFooter() {
               <li>
                 <a
                   href="#avantajlar"
-                  className="text-text-secondary hover:text-primary-orange transition-colors text-sm"
+                  className="text-gray-300 hover:text-primary-orange transition-colors text-sm"
                 >
                   Avantajlar
                 </a>
@@ -105,12 +105,12 @@ export function LandingFooter() {
 
           {/* Firmalar İçin */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Firmalar İçin</h3>
+            <h3 className="text-lg font-semibold mb-4 text-white">Firmalar İçin</h3>
             <ul className="space-y-3">
               <li>
                 <Link
                   href="/register?type=firma"
-                  className="text-text-secondary hover:text-primary-orange transition-colors text-sm"
+                  className="text-gray-300 hover:text-primary-orange transition-colors text-sm"
                 >
                   İlan Yayınla
                 </Link>
@@ -118,7 +118,7 @@ export function LandingFooter() {
               <li>
                 <Link
                   href="/register?type=firma"
-                  className="text-text-secondary hover:text-primary-orange transition-colors text-sm"
+                  className="text-gray-300 hover:text-primary-orange transition-colors text-sm"
                 >
                   Firma Kaydı
                 </Link>
@@ -126,7 +126,7 @@ export function LandingFooter() {
               <li>
                 <Link
                   href="/ilanlar"
-                  className="text-text-secondary hover:text-primary-orange transition-colors text-sm"
+                  className="text-gray-300 hover:text-primary-orange transition-colors text-sm"
                 >
                   Örnek İlanlar
                 </Link>
@@ -134,7 +134,7 @@ export function LandingFooter() {
               <li>
                 <a
                   href="#sss"
-                  className="text-text-secondary hover:text-primary-orange transition-colors text-sm"
+                  className="text-gray-300 hover:text-primary-orange transition-colors text-sm"
                 >
                   Sıkça Sorulan Sorular
                 </a>
@@ -144,12 +144,12 @@ export function LandingFooter() {
 
           {/* Taşeronlar İçin */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Taşeronlar İçin</h3>
+            <h3 className="text-lg font-semibold mb-4 text-white">Taşeronlar İçin</h3>
             <ul className="space-y-3">
               <li>
                 <Link
                   href="/register?type=taseron"
-                  className="text-text-secondary hover:text-primary-orange transition-colors text-sm"
+                  className="text-gray-300 hover:text-primary-orange transition-colors text-sm"
                 >
                   Teklif Ver
                 </Link>
@@ -157,7 +157,7 @@ export function LandingFooter() {
               <li>
                 <Link
                   href="/ilanlar"
-                  className="text-text-secondary hover:text-primary-orange transition-colors text-sm"
+                  className="text-gray-300 hover:text-primary-orange transition-colors text-sm"
                 >
                   İş Bul
                 </Link>
@@ -165,7 +165,7 @@ export function LandingFooter() {
               <li>
                 <Link
                   href="/register?type=taseron"
-                  className="text-text-secondary hover:text-primary-orange transition-colors text-sm"
+                  className="text-gray-300 hover:text-primary-orange transition-colors text-sm"
                 >
                   Taşeron Kaydı
                 </Link>
@@ -173,7 +173,7 @@ export function LandingFooter() {
               <li>
                 <a
                   href="#avantajlar"
-                  className="text-text-secondary hover:text-primary-orange transition-colors text-sm"
+                  className="text-gray-300 hover:text-primary-orange transition-colors text-sm"
                 >
                   Avantajlarımız
                 </a>
@@ -185,25 +185,25 @@ export function LandingFooter() {
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-soft-dark">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-text-secondary text-sm">
+            <p className="text-gray-400 text-sm">
               © {currentYear} Taşeroncum.com - Tüm hakları saklıdır.
             </p>
             <div className="flex gap-6">
               <Link
                 href="/gizlilik"
-                className="text-text-secondary hover:text-primary-orange transition-colors text-sm"
+                className="text-gray-400 hover:text-primary-orange transition-colors text-sm"
               >
                 Gizlilik Politikası
               </Link>
               <Link
                 href="/kullanim-kosullari"
-                className="text-text-secondary hover:text-primary-orange transition-colors text-sm"
+                className="text-gray-400 hover:text-primary-orange transition-colors text-sm"
               >
                 Kullanım Koşulları
               </Link>
               <Link
                 href="/iletisim"
-                className="text-text-secondary hover:text-primary-orange transition-colors text-sm"
+                className="text-gray-400 hover:text-primary-orange transition-colors text-sm"
               >
                 İletişim
               </Link>

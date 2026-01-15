@@ -35,12 +35,12 @@ export function BidCard({ bid, jobId, showReview }: BidCardProps) {
   const [comment, setComment] = useState("");
   const [reviewLoading, setReviewLoading] = useState(false);
 
-  // Calculate contractor average rating
-  const avgRating =
-    bid.contractor.reviews.length > 0
-      ? bid.contractor.reviews.reduce((sum: number, r: any) => sum + r.rating, 0) /
-        bid.contractor.reviews.length
-      : 0;
+  // Get offerer info - firma that made the bid
+  const offerer = bid.offerer;
+  const companyProfile = offerer?.companyProfile;
+  const displayName = companyProfile?.companyName || offerer?.email || "Firma";
+  const city = companyProfile?.city || "";
+  const phone = companyProfile?.phone;
 
   const handleStatusUpdate = async (status: "ACCEPTED" | "REJECTED") => {
     setLoading(true);
@@ -58,7 +58,9 @@ export function BidCard({ bid, jobId, showReview }: BidCardProps) {
     e.preventDefault();
     setReviewLoading(true);
     try {
-      await createReview(bid.contractorId, jobId, {
+      await createReview({
+        reviewedId: bid.offererId,
+        jobId: jobId,
         rating,
         comment: comment || undefined,
       });
@@ -75,29 +77,25 @@ export function BidCard({ bid, jobId, showReview }: BidCardProps) {
     <Card>
       <CardContent className="p-4">
         <div className="flex flex-col md:flex-row md:items-start gap-4">
-          {/* Contractor Info */}
+          {/* Offerer (Firma) Info */}
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
-                {bid.contractor.displayName.charAt(0)}
+                {displayName.charAt(0)}
               </div>
               <div>
                 <Link
-                  href={`/taseron/${bid.contractor.id}`}
+                  href={`/firma/${companyProfile?.id || offerer?.id}`}
                   className="font-semibold hover:text-primary"
                 >
-                  {bid.contractor.displayName}
+                  {displayName}
                 </Link>
-                <div className="flex items-center gap-2 text-sm text-muted">
-                  <MapPin className="h-3 w-3" />
-                  <span>{bid.contractor.city}</span>
-                  {avgRating > 0 && (
-                    <>
-                      <Star className="h-3 w-3 text-primary fill-primary ml-2" />
-                      <span>{avgRating.toFixed(1)}</span>
-                    </>
-                  )}
-                </div>
+                {city && (
+                  <div className="flex items-center gap-2 text-sm text-muted">
+                    <MapPin className="h-3 w-3" />
+                    <span>{city}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -123,26 +121,15 @@ export function BidCard({ bid, jobId, showReview }: BidCardProps) {
             </div>
 
             {/* Contact */}
-            {bid.contractor.phone && (
+            {phone && (
               <div className="flex items-center gap-2 mt-2 text-sm text-muted">
                 <Phone className="h-4 w-4" />
                 <a
-                  href={`tel:${bid.contractor.phone}`}
+                  href={`tel:${phone}`}
                   className="hover:text-primary"
                 >
-                  {bid.contractor.phone}
+                  {phone}
                 </a>
-              </div>
-            )}
-
-            {/* Skills */}
-            {bid.contractor.skills?.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {bid.contractor.skills.slice(0, 3).map((skill: string, i: number) => (
-                  <Badge key={i} variant="outline" className="text-xs">
-                    {skill}
-                  </Badge>
-                ))}
               </div>
             )}
           </div>
@@ -181,9 +168,9 @@ export function BidCard({ bid, jobId, showReview }: BidCardProps) {
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Taşeronu Değerlendir</DialogTitle>
+                    <DialogTitle>Firmayı Değerlendir</DialogTitle>
                     <DialogDescription>
-                      {bid.contractor.displayName} için değerlendirmenizi paylaşın.
+                      {displayName} için değerlendirmenizi paylaşın.
                     </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={handleReview} className="space-y-4">

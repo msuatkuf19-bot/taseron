@@ -29,13 +29,23 @@ export function BidForm({ jobId }: BidFormProps) {
     setLoading(true);
     setError("");
 
+    if (!formData.proposedPrice) {
+      setError("Teklif tutarı girilmelidir");
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.estimatedDuration) {
+      setError("Tahmini süre girilmelidir");
+      setLoading(false);
+      return;
+    }
+
     try {
       const result = await createBid(jobId, {
         message: formData.message,
-        proposedPrice: formData.proposedPrice
-          ? parseInt(formData.proposedPrice)
-          : null,
-        estimatedDuration: formData.estimatedDuration || undefined,
+        proposedPrice: parseInt(formData.proposedPrice),
+        estimatedDuration: formData.estimatedDuration,
       });
 
       if (result.error) {

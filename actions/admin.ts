@@ -207,16 +207,21 @@ export async function getAdminReviews() {
 
     const reviews = await prisma.review.findMany({
       include: {
-        contractor: {
+        reviewed: {
           select: {
             id: true,
             displayName: true,
           },
         },
-        company: {
+        reviewer: {
           select: {
             id: true,
-            companyName: true,
+            email: true,
+            companyProfile: {
+              select: {
+                companyName: true,
+              },
+            },
           },
         },
         job: {

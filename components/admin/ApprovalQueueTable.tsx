@@ -27,11 +27,11 @@ interface Job {
   durationText: string | null;
   createdBy: {
     email: string;
-    contractorProfile?: {
+    contractorProfile: {
       displayName: string;
       city: string;
       phone: string | null;
-    };
+    } | null;
   };
 }
 

@@ -41,9 +41,9 @@ export default async function FirmaJobDetailPage({ params }: PageProps) {
     include: {
       bids: {
         include: {
-          contractor: {
+          offerer: {
             include: {
-              reviews: true,
+              companyProfile: true,
             },
           },
         },

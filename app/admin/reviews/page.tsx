@@ -47,19 +47,25 @@ export default async function AdminReviewsPage() {
                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <Link
-                        href={`/firma/${review.company.id}`}
-                        className="font-medium hover:text-primary"
-                      >
-                        {review.company.companyName}
-                      </Link>
-                      <span className="text-muted">→</span>
-                      <Link
-                        href={`/taseron/${review.contractor.id}`}
-                        className="font-medium hover:text-primary"
-                      >
-                        {review.contractor.displayName}
-                      </Link>
+                      {review.reviewer?.companyProfile && (
+                        <>
+                          <Link
+                            href={`/firma/${review.reviewer.id}`}
+                            className="font-medium hover:text-primary"
+                          >
+                            {review.reviewer.companyProfile.companyName}
+                          </Link>
+                          <span className="text-muted">→</span>
+                        </>
+                      )}
+                      {review.reviewed && (
+                        <Link
+                          href={`/taseron/${review.reviewed.id}`}
+                          className="font-medium hover:text-primary"
+                        >
+                          {review.reviewed.displayName}
+                        </Link>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-1 mb-2">

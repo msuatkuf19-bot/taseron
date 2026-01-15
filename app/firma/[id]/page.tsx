@@ -61,56 +61,6 @@ export default async function CompanyProfilePage({ params }: PageProps) {
               </CardContent>
             )}
           </Card>
-
-          {/* Reviews */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Star className="h-5 w-5 text-primary" />
-                Verilen Değerlendirmeler
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {profile.reviews.length > 0 ? (
-                <div className="space-y-4">
-                  {profile.reviews.map((review) => (
-                    <div key={review.id} className="border-b pb-4 last:border-0">
-                      <div className="flex items-center justify-between mb-2">
-                        <Link
-                          href={`/taseron/${review.contractor.id}`}
-                          className="font-medium text-primary hover:underline"
-                        >
-                          {review.contractor.displayName}
-                        </Link>
-                        <div className="flex items-center gap-1">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-4 w-4 ${
-                                i < review.rating
-                                  ? "text-primary fill-primary"
-                                  : "text-gray-300"
-                              }`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      {review.comment && (
-                        <p className="text-muted text-sm">{review.comment}</p>
-                      )}
-                      <p className="text-xs text-muted mt-2">
-                        {formatDate(review.createdAt)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted text-center py-4">
-                  Henüz değerlendirme yapılmamış.
-                </p>
-              )}
-            </CardContent>
-          </Card>
         </div>
 
         {/* Sidebar */}
@@ -129,11 +79,6 @@ export default async function CompanyProfilePage({ params }: PageProps) {
               <div className="flex items-center justify-between">
                 <span className="text-muted">Toplam İlan</span>
                 <span className="font-semibold">{totalJobs}</span>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <span className="text-muted">Değerlendirme</span>
-                <span className="font-semibold">{profile.reviews.length}</span>
               </div>
             </CardContent>
           </Card>

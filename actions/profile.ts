@@ -26,16 +26,6 @@ export async function getCompanyProfile(profileId: string) {
           where: { isDeleted: false },
           select: { id: true, status: true },
         },
-        reviews: {
-          include: {
-            contractor: {
-              select: {
-                id: true,
-                displayName: true,
-              },
-            },
-          },
-        },
       },
     });
 
@@ -66,10 +56,15 @@ export async function getContractorProfile(profileId: string) {
         },
         reviews: {
           include: {
-            company: {
+            reviewer: {
               select: {
                 id: true,
-                companyName: true,
+                email: true,
+                companyProfile: {
+                  select: {
+                    companyName: true,
+                  },
+                },
               },
             },
             job: {
@@ -80,9 +75,6 @@ export async function getContractorProfile(profileId: string) {
             },
           },
           orderBy: { createdAt: "desc" },
-        },
-        _count: {
-          select: { bids: true },
         },
       },
     });
@@ -102,7 +94,6 @@ export async function getContractorProfile(profileId: string) {
       profile,
       avgRating,
       totalReviews: profile.reviews.length,
-      totalBids: profile._count.bids,
     };
   } catch (error) {
     console.error("Get contractor profile error:", error);

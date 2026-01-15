@@ -638,6 +638,145 @@ export async function adminUnpublishJob(jobId: string, reason?: string) {
 /**
  * Admin dashboard istatistikleri
  */
+/**
+ * Alias: getPublicJobs - Public ilanları listeler
+ * ilanlar/page.tsx'de kullanılıyor
+ */
+export async function getPublicJobs(filters?: {
+  search?: string;
+  category?: string;
+  city?: string;
+  sortBy?: "newest" | "oldest" | "budget_low" | "budget_high";
+  page?: number;
+  pageSize?: number;
+}) {
+  try {
+    const result = await listApprovedJobs({
+      ...filters,
+      category: filters?.category as any,
+    });
+    return {
+      jobs: result.jobs,
+      pagination: {
+        page: result.pagination.page,
+        pageSize: result.pagination.pageSize,
+        totalCount: result.pagination.total,
+        totalPages: result.pagination.totalPages,
+      },
+      error: undefined,
+    };
+  } catch (error) {
+    console.error("Get public jobs error:", error);
+    return {
+      jobs: [],
+      pagination: { totalCount: 0, page: 1, pageSize: 12, totalPages: 0 },
+      error: "İlanlar yüklenirken hata oluştu",
+    };
+  }
+}
+
+/**
+ * Alias: getMyJobs - Firma ilanlarını listeler
+ * dashboard/firma/page.tsx'de kullanılıyor
+ */
+export async function getMyJobs() {
+  const result = await listMyJobsByApprovalStatus();
+  return { jobs: result.jobs, error: result.error };
+}
+
+/**
+ * Alias: createJob - Firma yeni ilan oluşturur (doğrudan APPROVED olarak)
+ * dashboard/firma için
+ */
+export async function createJob(data: JobPostCreateInput) {
+  try {
+    const user = await requireRole("FIRMA");
+
+    // Firma profili kontrolü
+    if (!user.companyProfileId) {
+      return { error: "Firma profili bulunamadı" };
+    }
+
+    // Validation
+    const validatedData = jobPostCreateSchema.parse(data);
+
+    // Firma ilanları doğrudan APPROVED olarak oluşturulur
+    const job = await prisma.jobPost.create({
+      data: {
+        title: validatedData.title,
+        description: validatedData.description,
+        city: validatedData.city,
+        category: validatedData.category as Category,
+        budgetMin: validatedData.budgetMin,
+        budgetMax: validatedData.budgetMax,
+        durationText: validatedData.durationText,
+        contactPhone: validatedData.contactPhone,
+        contactEmail: validatedData.contactEmail,
+        companyId: user.companyProfileId,
+        createdById: user.id,
+        createdByRole: "FIRMA",
+        approvalStatus: "APPROVED",
+        status: "OPEN",
+        approvedAt: new Date(),
+        approvedById: user.id,
+        publishedAt: new Date(),
+      },
+    });
+
+    revalidatePath("/dashboard/firma");
+    revalidatePath("/ilanlar");
+
+    return { success: true, jobId: job.id };
+  } catch (error) {
+    console.error("Create job error:", error);
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: "İlan oluşturulurken hata oluştu" };
+  }
+}
+
+/**
+ * toggleJobStatus - İlan durumunu değiştirir (OPEN/CLOSED)
+ */
+export async function toggleJobStatus(jobId: string) {
+  try {
+    const user = await requireAuth();
+
+    const job = await prisma.jobPost.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!job) {
+      return { error: "İlan bulunamadı" };
+    }
+
+    // Sadece ilan sahibi veya admin değiştirebilir
+    if (job.createdById !== user.id && user.role !== "ADMIN") {
+      return { error: "Bu işlem için yetkiniz yok" };
+    }
+
+    const newStatus = job.status === "OPEN" ? "CLOSED" : "OPEN";
+
+    await prisma.jobPost.update({
+      where: { id: jobId },
+      data: { status: newStatus },
+    });
+
+    revalidatePath("/dashboard/firma");
+    revalidatePath("/dashboard/taseron/ilanlar");
+    revalidatePath(`/ilan/${jobId}`);
+
+    return { success: true, newStatus };
+  } catch (error) {
+    console.error("Toggle job status error:", error);
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: "İlan durumu değiştirilirken hata oluştu" };
+  }
+}
+
 export async function getAdminDashboardStats() {
   try {
     await requireRole("ADMIN");

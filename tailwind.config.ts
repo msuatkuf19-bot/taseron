@@ -25,11 +25,19 @@ const config: Config = {
         'dark-bg': '#2E2E2E',
         'soft-dark': '#2A2A2A',
         'light-gray-bg': '#F5F5F5',
-        'text-primary': '#2E2E2E',
-        'text-secondary': '#6B7280',
         'success-green': '#22C55E',
         'warning-yellow': '#FACC15',
         'border-gray': '#E5E7EB',
+        
+        // Text colors for light backgrounds
+        'text-primary': '#2E2E2E',
+        'text-secondary': '#6B7280',
+        'text-muted': '#9CA3AF',
+        
+        // Text colors for dark backgrounds
+        'text-on-dark': '#F9FAFB',
+        'text-on-dark-secondary': '#D1D5DB',
+        'text-on-dark-muted': '#9CA3AF',
         
         border: "#E5E7EB",
         input: "#E5E7EB",
@@ -50,7 +58,7 @@ const config: Config = {
           foreground: "#FFFFFF",
         },
         muted: {
-          DEFAULT: "#6B7280",
+          DEFAULT: "#F3F4F6",
           foreground: "#6B7280",
         },
         accent: {

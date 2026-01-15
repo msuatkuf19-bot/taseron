@@ -21,7 +21,7 @@ interface PageProps {
 
 export default async function ContractorProfilePage({ params }: PageProps) {
   const { id } = await params;
-  const { profile, avgRating, totalReviews, totalBids, error } =
+  const { profile, avgRating, totalReviews, error } =
     await getContractorProfile(id);
 
   if (error || !profile) {
@@ -125,12 +125,14 @@ export default async function ContractorProfilePage({ params }: PageProps) {
                     <div key={review.id} className="border-b pb-4 last:border-0">
                       <div className="flex items-center justify-between mb-2">
                         <div>
-                          <Link
-                            href={`/firma/${review.company.id}`}
-                            className="font-medium text-primary hover:underline"
-                          >
-                            {review.company.companyName}
-                          </Link>
+                          {review.reviewer?.companyProfile && (
+                            <Link
+                              href={`/firma/${review.reviewer.id}`}
+                              className="font-medium text-primary hover:underline"
+                            >
+                              {review.reviewer.companyProfile.companyName}
+                            </Link>
+                          )}
                           {review.job && (
                             <span className="text-muted text-sm ml-2">
                               - {review.job.title}
@@ -189,11 +191,6 @@ export default async function ContractorProfilePage({ params }: PageProps) {
               <div className="flex items-center justify-between">
                 <span className="text-muted">Değerlendirme</span>
                 <span className="font-semibold">{totalReviews}</span>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <span className="text-muted">Verilen Teklif</span>
-                <span className="font-semibold">{totalBids}</span>
               </div>
             </CardContent>
           </Card>
