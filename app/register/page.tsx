@@ -3,225 +3,173 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { AlertCircle, Building2, HardHat, Loader2 } from "lucide-react";
 import { registerUser } from "@/actions/auth";
 import { CITIES } from "@/lib/utils";
+import { AuthShell } from "@/components/auth/auth-shell";
+import { PasswordField } from "@/components/auth/password-field";
+
+type Role = "FIRMA" | "TASERON";
+
+function initialRole(params: { get(name: string): string | null }): Role | "" {
+  const v = (params.get("type") || params.get("role") || "").toUpperCase();
+  return v === "FIRMA" || v === "TASERON" ? v : "";
+}
+
+const ROLES: { value: Role; title: string; text: string; icon: typeof Building2 }[] = [
+  { value: "FIRMA", title: "Firmayım", text: "Onaylı ilanları inceleyip teklif vermek istiyorum.", icon: Building2 },
+  { value: "TASERON", title: "Taşeronum", text: "İlan açıp firmalardan teklif almak istiyorum.", icon: HardHat },
+];
 
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const defaultRole = searchParams.get("role") || "";
 
-  const [formData, setFormData] = useState({
+  const [form, setForm] = useState({
+    role: initialRole(searchParams),
     email: "",
     password: "",
-    role: defaultRole as "FIRMA" | "TASERON" | "",
     companyName: "",
     displayName: "",
     city: "",
     phone: "",
   });
+  const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    if (!form.role) return setError("Devam etmek için hesap türünü seçin.");
+    if (!form.city) return setError("Lütfen şehrinizi seçin.");
+    if (!accepted) return setError("Kayıt için Kullanım Koşulları'nı kabul etmeniz ve Aydınlatma Metni'ni okumanız gerekir.");
     setLoading(true);
-
-    if (!formData.role) {
-      setError("Lütfen hesap türü seçin");
-      setLoading(false);
-      return;
-    }
-
     try {
       const result = await registerUser({
-        email: formData.email,
-        password: formData.password,
-        role: formData.role,
-        companyName: formData.companyName,
-        displayName: formData.displayName,
-        city: formData.city,
-        phone: formData.phone,
+        email: form.email.trim(),
+        password: form.password,
+        role: form.role,
+        companyName: form.companyName.trim(),
+        displayName: form.displayName.trim(),
+        city: form.city,
+        phone: form.phone.trim(),
       });
-
-      if (result.error) {
-        setError(result.error);
-      } else {
-        router.push("/login?registered=true");
-      }
+      if (result.error) setError(result.error);
+      else router.push("/login?registered=true");
     } catch {
-      setError("Kayıt sırasında bir hata oluştu");
+      setError("Kayıt tamamlanamadı. Lütfen birkaç dakika sonra tekrar deneyin.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-[calc(100vh-200px)] flex items-center justify-center py-12 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Kayıt Ol</CardTitle>
-          <CardDescription>
-            Yeni bir hesap oluşturarak başlayın
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
-                {error}
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="role">Hesap Türü</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, role: value as "FIRMA" | "TASERON" })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Hesap türü seçin" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="FIRMA">Firma (İlan açmak için)</SelectItem>
-                  <SelectItem value="TASERON">Taşeron (Teklif vermek için)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">E-posta</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="ornek@email.com"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-                required
+    <AuthShell
+      title="Ücretsiz hesap oluşturun"
+      subtitle={
+        <>
+          Zaten üye misiniz? <Link href="/login">Giriş yapın</Link>
+        </>
+      }
+      aside={{
+        heading: "Doğru iş, doğru ekiple başlar.",
+        points: [
+          "Kayıt ve ilan yayınlama ücretsiz",
+          "Her ilan yayına girmeden önce incelenir",
+          "Teklifler fiyat ve süreyle yan yana",
+          "Tamamlanan işler profilinize puan olarak işlenir",
+        ],
+      }}
+    >
+      {error && (
+        <div className="auth-alert is-error" role="alert">
+          <AlertCircle size={18} aria-hidden="true" />
+          <span>{error}</span>
+        </div>
+      )}
+      <form onSubmit={handleSubmit} className="auth-form">
+        <fieldset className="auth-roles">
+          <legend>Hesap türü</legend>
+          {ROLES.map(({ value, title, text, icon: Icon }) => (
+            <label key={value} className={`auth-role${form.role === value ? " is-active" : ""}`}>
+              <input
+                type="radio"
+                name="role"
+                value={value}
+                checked={form.role === value}
+                onChange={() => set("role", value)}
               />
-            </div>
+              <Icon size={22} strokeWidth={1.7} aria-hidden="true" />
+              <span className="auth-role-title">{title}</span>
+              <span className="auth-role-text">{text}</span>
+            </label>
+          ))}
+        </fieldset>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Şifre</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="En az 6 karakter"
-                value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
-                required
-                minLength={6}
-              />
-            </div>
-
-            {formData.role === "FIRMA" && (
-              <div className="space-y-2">
-                <Label htmlFor="companyName">Firma Adı</Label>
-                <Input
-                  id="companyName"
-                  placeholder="Firma adınız"
-                  value={formData.companyName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, companyName: e.target.value })
-                  }
-                  required
-                />
-              </div>
-            )}
-
-            {formData.role === "TASERON" && (
-              <div className="space-y-2">
-                <Label htmlFor="displayName">Ad Soyad / Ünvan</Label>
-                <Input
-                  id="displayName"
-                  placeholder="Adınız veya ünvanınız"
-                  value={formData.displayName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, displayName: e.target.value })
-                  }
-                  required
-                />
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="city">Şehir</Label>
-              <Select
-                value={formData.city}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, city: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Şehir seçin" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CITIES.map((city) => (
-                    <SelectItem key={city} value={city}>
-                      {city}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone">Telefon (Opsiyonel)</Label>
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="05XX XXX XX XX"
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
-              />
-            </div>
-
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Kayıt yapılıyor..." : "Kayıt Ol"}
-            </Button>
-          </form>
-
-          <div className="mt-6 text-center text-sm">
-            <span className="text-muted">Zaten hesabınız var mı? </span>
-            <Link href="/login" className="text-primary hover:underline">
-              Giriş yapın
-            </Link>
+        {form.role === "FIRMA" && (
+          <div className="auth-field">
+            <label htmlFor="companyName">Firma adı</label>
+            <input id="companyName" className="auth-input" autoComplete="organization" value={form.companyName} onChange={(e) => set("companyName", e.target.value)} required />
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        )}
+        {form.role === "TASERON" && (
+          <div className="auth-field">
+            <label htmlFor="displayName">Ad soyad veya ticari unvan</label>
+            <input id="displayName" className="auth-input" autoComplete="name" value={form.displayName} onChange={(e) => set("displayName", e.target.value)} required />
+          </div>
+        )}
+
+        <div className="auth-field">
+          <label htmlFor="email">E-posta adresi</label>
+          <input id="email" type="email" className="auth-input" autoComplete="email" inputMode="email" value={form.email} onChange={(e) => set("email", e.target.value)} required />
+        </div>
+
+        <div className="auth-field">
+          <label htmlFor="password">Şifre</label>
+          <PasswordField id="password" value={form.password} onChange={(v) => set("password", v)} autoComplete="new-password" minLength={6} describedBy="password-hint" />
+          <p id="password-hint" className="auth-hint">En az 6 karakter. Harf ve rakam karışımı daha güvenlidir.</p>
+        </div>
+
+        <div className="auth-row">
+          <div className="auth-field">
+            <label htmlFor="city">Şehir</label>
+            <select id="city" className="auth-input auth-select" value={form.city} onChange={(e) => set("city", e.target.value)} required>
+              <option value="" disabled>Seçin</option>
+              {CITIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+          <div className="auth-field">
+            <label htmlFor="phone">
+              Telefon <span className="auth-optional">(isteğe bağlı)</span>
+            </label>
+            <input id="phone" type="tel" className="auth-input" autoComplete="tel" inputMode="tel" placeholder="05xx xxx xx xx" value={form.phone} onChange={(e) => set("phone", e.target.value)} />
+          </div>
+        </div>
+
+        <label className="auth-check">
+          <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} required />
+          <span>
+            <Link href="/kullanim-kosullari" target="_blank">Kullanım Koşulları</Link>&apos;nı okudum ve kabul ediyorum.
+            Kişisel verilerimin <Link href="/kvkk-aydinlatma-metni" target="_blank">KVKK Aydınlatma Metni</Link> kapsamında
+            işleneceği konusunda bilgilendirildim.
+          </span>
+        </label>
+
+        <button type="submit" className="auth-submit" disabled={loading}>
+          {loading ? <><Loader2 size={18} className="auth-spin" aria-hidden="true" /> Hesap oluşturuluyor</> : "Hesap oluştur"}
+        </button>
+      </form>
+    </AuthShell>
   );
 }
 
 export default function RegisterPage() {
   return (
-    <Suspense fallback={<div className="min-h-[calc(100vh-200px)] flex items-center justify-center">Yükleniyor...</div>}>
+    <Suspense fallback={<div className="auth-loading">Yükleniyor…</div>}>
       <RegisterForm />
     </Suspense>
   );

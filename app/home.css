@@ -1,0 +1,275 @@
+/* ============================================================
+   Taşeroncum ana sayfa
+   Beton, iş güvenliği turuncusu, çimento ve proje çizgisi.
+   ============================================================ */
+.home {
+  --beton: #2e3236;
+  --beton-2: #3a3f44;
+  --beton-3: #565c61;
+  --turuncu: #f37021;
+  --turuncu-koyu: #c9530d;
+  --cimento: #e8eaeb;
+  --kagit: #f6f7f7;
+  --cizgi: #8c979e;
+  --metin: #1f2326;
+  --metin-2: #5b6369;
+  --wide: "wdth" 118;
+  --narrow: "wdth" 80;
+  color: var(--metin);
+  background: var(--kagit);
+}
+.home h1, .home h2, .home h3 { font-variation-settings: var(--wide); }
+.home h2 { font-size: clamp(30px, 3.6vw, 48px); line-height: 1.08; font-weight: 750; letter-spacing: -0.025em; max-width: 20ch; text-wrap: balance; }
+.home p { text-wrap: pretty; }
+
+/* butonlar */
+.h-btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 54px; padding: 0 26px; border-radius: 4px; font-size: 15px; font-weight: 650; transition: background-color .18s, color .18s, border-color .18s, transform .18s; }
+.h-btn:active { transform: translateY(1px); }
+.h-btn-primary { background: var(--turuncu); color: #fff; }
+.h-btn-primary:hover { background: var(--turuncu-koyu); }
+.h-btn-ghost { color: #fff; border: 1.5px solid #ffffff55; }
+.h-btn-ghost:hover { border-color: #fff; background: #ffffff10; }
+.h-btn-ghost-dark { color: #fff; border: 1.5px solid #ffffff40; }
+.h-btn-ghost-dark:hover { border-color: #fff; }
+.h-link { display: inline-flex; align-items: center; gap: 8px; font-weight: 650; font-size: 15px; color: var(--turuncu-koyu); border-bottom: 1.5px solid currentColor; padding-bottom: 3px; }
+.h-link:hover { color: var(--metin); }
+
+/* ---------------- HERO ---------------- */
+.h-hero {
+  position: relative;
+  color: #fff;
+  background-color: var(--beton);
+  background-image:
+    linear-gradient(#ffffff0a 1px, transparent 1px),
+    linear-gradient(90deg, #ffffff0a 1px, transparent 1px),
+    linear-gradient(#ffffff05 1px, transparent 1px),
+    linear-gradient(90deg, #ffffff05 1px, transparent 1px);
+  background-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px;
+  overflow: hidden;
+}
+.h-hero-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 40px; align-items: end; padding-top: 56px; }
+.h-hero-copy { padding-bottom: 64px; }
+.h-kicker { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 550; color: #d4d9dc; padding: 8px 14px 8px 12px; border: 1px solid #ffffff26; border-radius: 40px; }
+.h-pulse { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 0 #4ade8099; animation: h-pulse 2.4s ease-out infinite; }
+@keyframes h-pulse { 0% { box-shadow: 0 0 0 0 #4ade8088; } 70%, 100% { box-shadow: 0 0 0 9px #4ade8000; } }
+.h-hero h1 {
+  margin: 24px 0 22px;
+  font-size: clamp(46px, 5.6vw, 84px);
+  line-height: .96;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  font-variation-settings: "wdth" 125;
+  max-width: 12ch;
+  text-wrap: balance;
+}
+.h-lede { max-width: 54ch; font-size: 18px; line-height: 1.65; color: #c9cfd3; }
+.h-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
+.h-hero-facts { display: flex; flex-wrap: wrap; gap: 10px 26px; margin-top: 34px; font-size: 14px; color: #aab3b8; }
+.h-hero-facts li { display: inline-flex; align-items: center; gap: 8px; }
+.h-hero-facts svg { color: var(--turuncu); }
+.h-hero-art { align-self: end; }
+
+/* vinç */
+.crane-scene { display: block; width: 100%; height: auto; overflow: visible; }
+.crane-scene .floor-label { font-size: 11px; font-weight: 600; fill: #e8eaeb; font-variation-settings: "wdth" 90; letter-spacing: .01em; }
+.crane-scene .floor-label.strong { fill: #fff; font-weight: 750; }
+.crane-scene .dim-text { font-size: 11px; fill: #a7b0b6; font-variation-settings: "wdth" 85; }
+.crane-scene .trolley { animation: h-trolley 1.4s cubic-bezier(.55,0,.25,1) .5s both; }
+.crane-scene .drop { animation: h-drop 1.9s cubic-bezier(.45,0,.2,1) 1.9s both; }
+.crane-scene .cable { transform-box: fill-box; transform-origin: top; animation: h-cable 1.9s cubic-bezier(.45,0,.2,1) 1.9s both; }
+.crane-scene .new-floor { animation: h-settle .5s ease-out 3.75s both; transform-box: fill-box; transform-origin: bottom; }
+@keyframes h-trolley { from { transform: translateX(-150px); } to { transform: translateX(0); } }
+@keyframes h-drop { from { transform: translateY(-150px); } to { transform: translateY(0); } }
+@keyframes h-cable { from { transform: scaleY(.0001); } to { transform: scaleY(1); } }
+@keyframes h-settle { 0% { transform: scaleY(1); } 35% { transform: scaleY(.965); } 100% { transform: scaleY(1); } }
+
+/* canlı şerit */
+.h-ticker { position: relative; display: flex; align-items: stretch; border-top: 1px solid #ffffff1f; background: #262a2d; }
+.h-ticker-tag { flex-shrink: 0; display: flex; align-items: center; padding: 0 22px; background: var(--turuncu); color: #fff; font-weight: 700; font-size: 14px; font-variation-settings: var(--narrow); }
+.h-ticker-track { flex: 1; overflow: hidden; mask-image: linear-gradient(90deg, transparent, #000 40px, #000 calc(100% - 60px), transparent); }
+.h-ticker-list { display: flex; width: max-content; animation: h-marquee 60s linear infinite; }
+.h-ticker:hover .h-ticker-list, .h-ticker:focus-within .h-ticker-list { animation-play-state: paused; }
+.h-ticker-list li { display: flex; align-items: center; }
+.h-ticker-list li::after { content: ""; width: 6px; height: 6px; background: var(--turuncu); margin: 0 28px; }
+.h-ticker-list a, .h-ticker-list li > span { display: inline-flex; gap: 10px; align-items: baseline; padding: 18px 0; font-size: 15px; white-space: nowrap; }
+.h-ticker-list strong { font-weight: 650; color: #fff; }
+.h-ticker-list span span { color: #9ea8ae; font-size: 14px; }
+.h-ticker-list a:hover strong { color: var(--turuncu); }
+@keyframes h-marquee { to { transform: translateX(-50%); } }
+
+/* ---------------- PAZAR ---------------- */
+.h-market { padding: 120px 0; background: var(--kagit); }
+.h-market-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start; }
+.h-market-grid > div:first-child p { max-width: 52ch; margin-top: 22px; font-size: 17px; line-height: 1.75; color: var(--metin-2); }
+.h-market-grid > div:first-child p + p { color: var(--metin); font-weight: 550; }
+.h-ledger { background: #fff; border: 1px solid #d8dcde; border-top: 4px solid var(--beton); padding: 10px 28px 22px; }
+.h-ledger-head { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid #d8dcde; font-size: 13px; font-weight: 600; color: var(--metin-2); font-variation-settings: var(--narrow); }
+.h-ledger-row { display: grid; grid-template-columns: auto 1fr auto; align-items: end; gap: 14px; padding: 22px 0; border-bottom: 1px dashed #cfd4d7; }
+.h-ledger-row > span:first-child { font-size: 16px; font-weight: 550; }
+.h-ledger-row small { display: block; margin-top: 4px; font-size: 13px; color: var(--metin-2); font-weight: 400; }
+.h-ledger-dots { height: 1px; margin-bottom: 9px; background-image: radial-gradient(circle, #9aa3a8 1px, transparent 1.2px); background-size: 7px 3px; background-repeat: repeat-x; }
+.h-ledger-row strong { font-size: clamp(28px, 3vw, 40px); font-weight: 800; letter-spacing: -0.02em; font-variation-settings: "wdth" 110; color: var(--beton); font-variant-numeric: tabular-nums; line-height: 1; }
+.h-ledger-row:nth-of-type(3) strong { color: var(--turuncu-koyu); }
+.h-ledger-src { margin-top: 16px; font-size: 12.5px; color: var(--metin-2); }
+
+/* ---------------- ADIMLAR ---------------- */
+.h-section-head { margin-bottom: 52px; }
+.h-section-head > p, .h-section-head > div > p { margin-top: 14px; font-size: 17px; color: var(--metin-2); max-width: 56ch; }
+.h-section-head-row { display: flex; justify-content: space-between; align-items: end; gap: 24px; }
+.h-steps { padding: 120px 0; background: var(--cimento); }
+.h-steps-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; border-left: 1px solid #c4cacd; }
+.h-step { display: flex; flex-direction: column; padding: 0 28px 8px; border-right: 1px solid #c4cacd; }
+.h-step-building { display: flex; flex-direction: column-reverse; justify-content: flex-start; height: 168px; margin-bottom: 26px; border-bottom: 3px solid var(--beton); }
+.h-step-building span { display: block; width: 62%; height: 36px; margin-top: 4px; background: var(--beton-3); background-image: repeating-linear-gradient(90deg, transparent 0 10px, #ffffff26 10px 22px); background-size: 100% 12px; background-position: 0 12px; background-repeat: no-repeat; }
+.h-step-building span.is-new { background-color: var(--turuncu); }
+.h-step-no { font-size: 13px; font-weight: 700; color: var(--turuncu-koyu); font-variation-settings: var(--narrow); }
+.h-step h3 { margin: 8px 0 12px; font-size: 21px; line-height: 1.2; font-weight: 750; letter-spacing: -0.015em; }
+.h-step p { font-size: 15px; line-height: 1.7; color: var(--metin-2); }
+
+/* ---------------- UZMANLIKLAR ---------------- */
+.h-trades { padding: 120px 0; background: var(--kagit); }
+.h-trades-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-top: 1px solid #d0d5d8; border-left: 1px solid #d0d5d8; }
+.h-trade { position: relative; display: flex; flex-direction: column; height: 100%; min-height: 200px; padding: 26px 22px 22px; background: #fff; border-right: 1px solid #d0d5d8; border-bottom: 1px solid #d0d5d8; transition: background-color .2s, color .2s; }
+.h-trade::before { content: ""; position: absolute; left: -1px; right: -1px; top: -1px; height: 4px; background: var(--turuncu); transform: scaleX(0); transform-origin: left; transition: transform .25s ease; }
+.h-trade:hover::before, .h-trade:focus-visible::before { transform: scaleX(1); }
+.h-trade svg { color: var(--turuncu); margin-bottom: 22px; }
+.h-trade-name { font-size: 18px; font-weight: 750; font-variation-settings: "wdth" 110; letter-spacing: -0.01em; }
+.h-trade-hint { margin-top: 6px; font-size: 14px; line-height: 1.5; color: var(--metin-2); }
+.h-trade-count { margin-top: auto; padding-top: 18px; font-size: 13px; font-weight: 600; color: var(--metin-2); font-variation-settings: var(--narrow); }
+.h-trade:hover { background: var(--beton); color: #fff; }
+.h-trade:hover .h-trade-hint, .h-trade:hover .h-trade-count { color: #c3cace; }
+
+/* ---------------- İLANLAR ---------------- */
+.h-jobs { padding: 0 0 120px; background: var(--kagit); }
+.h-jobs-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.h-job { display: flex; flex-direction: column; height: 100%; padding: 26px; background: #fff; border: 1px solid #d8dcde; border-radius: 6px; transition: border-color .2s, box-shadow .2s; }
+.h-job:hover { border-color: var(--beton); box-shadow: 6px 6px 0 var(--turuncu); }
+.h-job-cat { align-self: start; padding: 5px 10px; font-size: 12.5px; font-weight: 650; background: #fdeee4; color: var(--turuncu-koyu); border-radius: 3px; }
+.h-job h3 { margin: 16px 0 18px; font-size: 19px; line-height: 1.3; font-weight: 700; letter-spacing: -0.01em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.h-job dl { display: grid; gap: 9px; font-size: 14.5px; }
+.h-job dl div { display: flex; justify-content: space-between; gap: 12px; }
+.h-job dt { color: var(--metin-2); }
+.h-job dd { font-weight: 600; text-align: right; }
+.h-job dl { margin-bottom: 22px; }
+.h-job-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 16px; border-top: 1px solid #e6e9ea; font-size: 13.5px; color: var(--metin-2); }
+.h-job-foot > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.h-job-foot > span:last-child { font-weight: 700; color: var(--metin); white-space: nowrap; }
+.h-empty { display: flex; align-items: center; gap: 24px; padding: 32px; background: #fff; border: 1.5px dashed #b9c0c4; border-radius: 6px; }
+.h-empty svg { flex-shrink: 0; color: var(--turuncu); }
+.h-empty div { flex: 1; }
+.h-empty h3 { font-size: 20px; font-weight: 750; }
+.h-empty p { margin-top: 6px; color: var(--metin-2); }
+
+/* ---------------- GÜVEN ---------------- */
+.h-trust { padding: 120px 0; background: #fff; border-top: 1px solid #e3e6e8; }
+.h-trust-grid { display: grid; grid-template-columns: 1fr 1.05fr; gap: 80px; align-items: center; }
+.h-trust-list { margin-top: 36px; }
+.h-trust-list li { padding: 22px 0 22px 26px; border-left: 3px solid var(--cimento); }
+.h-trust-list li:first-child { border-left-color: var(--turuncu); }
+.h-trust-list h3 { font-size: 19px; font-weight: 750; }
+.h-trust-list p { margin-top: 6px; font-size: 15.5px; line-height: 1.65; color: var(--metin-2); max-width: 46ch; }
+.h-mock { position: relative; background: var(--beton); border-radius: 10px; padding: 0 0 18px; box-shadow: 0 30px 60px -20px #2e323666; transform: rotate(-1.2deg); }
+.h-mock-bar { display: flex; gap: 7px; padding: 14px 16px; border-bottom: 1px solid #ffffff14; }
+.h-mock-bar span { width: 10px; height: 10px; border-radius: 50%; background: #ffffff26; }
+.h-mock-body { margin: 18px; padding: 22px; background: #fff; border-radius: 6px; }
+.h-mock-job { display: flex; justify-content: space-between; gap: 16px; align-items: start; padding-bottom: 18px; border-bottom: 1px solid #e6e9ea; }
+.h-mock-job > div { display: flex; flex-direction: column; gap: 6px; }
+.h-mock-cat { align-self: start; font-size: 12px; font-weight: 650; color: var(--turuncu-koyu); }
+.h-mock-job strong { font-size: 18px; font-weight: 750; }
+.h-mock-meta { font-size: 13.5px; color: var(--metin-2); }
+.h-mock-status { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; padding: 6px 10px; font-size: 12.5px; font-weight: 650; color: #15803d; background: #e8f7ee; border-radius: 3px; }
+.h-mock-label { margin: 18px 0 8px; font-size: 13px; font-weight: 650; color: var(--metin-2); }
+.h-mock-offer { display: grid; grid-template-columns: 1fr auto auto; gap: 18px; align-items: center; padding: 13px 14px; margin-top: 6px; font-size: 14.5px; border: 1px solid #e6e9ea; border-radius: 4px; }
+.h-mock-offer span:nth-child(2) { color: var(--metin-2); font-size: 13.5px; }
+.h-mock-offer strong { font-variant-numeric: tabular-nums; font-weight: 750; }
+.h-mock-offer.is-best { border-color: var(--turuncu); background: #fff6f0; }
+.h-mock figcaption { padding: 0 20px; font-size: 12px; color: #9ea8ae; }
+
+/* ---------------- YATIRIMCI ---------------- */
+.h-investor { padding: 120px 0; color: #fff; background: var(--beton); background-image: linear-gradient(#ffffff08 1px, transparent 1px), linear-gradient(90deg, #ffffff08 1px, transparent 1px); background-size: 120px 120px; }
+.h-investor-top { display: grid; grid-template-columns: 1.3fr 1fr; gap: 60px; align-items: end; }
+.h-investor h2 { max-width: 18ch; }
+.h-investor-top p { font-size: 17px; line-height: 1.7; color: #c3cace; max-width: 44ch; }
+.h-live { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 64px; border-top: 1px solid #ffffff26; }
+.h-live > div { padding: 28px 24px 26px 0; }
+.h-live > div + div { padding-left: 24px; border-left: 1px solid #ffffff1a; }
+.h-live strong { display: block; font-size: clamp(40px, 4.4vw, 64px); line-height: 1; font-weight: 800; font-variation-settings: "wdth" 115; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.h-live span { display: block; margin-top: 10px; font-size: 14.5px; color: #aab3b8; }
+.h-live-note { grid-column: 1 / -1; padding-top: 4px; font-size: 12.5px; color: #8b959b; }
+.h-roadmap { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; margin-top: 72px; }
+.h-roadmap li { position: relative; padding: 26px 24px 28px; background: var(--beton-2); border-top: 4px solid var(--beton-3); }
+.h-roadmap li.is-done { border-top-color: var(--turuncu); background: #43484d; }
+.h-road-stage { font-size: 13px; font-weight: 700; color: #aab3b8; font-variation-settings: var(--narrow); }
+.h-roadmap li.is-done .h-road-stage { color: #ffb27f; }
+.h-roadmap h3 { margin: 12px 0 10px; font-size: 19px; line-height: 1.25; font-weight: 750; }
+.h-roadmap p { font-size: 14.5px; line-height: 1.65; color: #b8c0c5; }
+.h-investor-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 56px; }
+
+/* ---------------- İKİ KAPI ---------------- */
+.h-doors { display: grid; grid-template-columns: 1fr 1fr; }
+.h-door { position: relative; display: flex; flex-direction: column; gap: 14px; padding: 72px max(32px, calc((100vw - 1240px) / 2)) 72px; background: var(--turuncu); color: #fff; transition: background-color .2s; }
+.h-door + .h-door { padding-left: 64px; }
+.h-door:first-child { padding-right: 64px; }
+.h-door-alt { background: var(--cimento); color: var(--metin); }
+.h-door:hover { background: var(--turuncu-koyu); }
+.h-door-alt:hover { background: #dcdfe1; }
+.h-door-alt svg { color: var(--turuncu); }
+.h-door-who { margin-top: 10px; font-size: 15px; font-weight: 700; opacity: .85; font-variation-settings: var(--narrow); }
+.h-door-title { font-size: clamp(24px, 2.6vw, 34px); line-height: 1.15; font-weight: 750; font-variation-settings: "wdth" 115; letter-spacing: -0.02em; max-width: 20ch; }
+.h-door-go { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; font-weight: 650; font-size: 16px; }
+.h-door:hover .h-door-go svg { transform: translate(2px, -2px); }
+.h-door-go svg { transition: transform .2s; }
+
+/* odak */
+.home a:focus-visible { outline: 3px solid var(--turuncu); outline-offset: 3px; }
+.h-hero a:focus-visible, .h-investor a:focus-visible { outline-color: #ffb27f; }
+.h-door:focus-visible { outline-offset: -6px; outline-color: #fff; }
+.h-door-alt:focus-visible { outline-color: var(--turuncu); }
+
+/* ---------------- RESPONSIVE ---------------- */
+@media (max-width: 1100px) {
+  .h-hero-grid { gap: 24px; }
+  .h-trades-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .h-roadmap { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .h-market-grid, .h-trust-grid { gap: 48px; }
+}
+@media (max-width: 900px) {
+  .h-hero-grid { grid-template-columns: 1fr; padding-top: 48px; }
+  .h-hero-copy { padding-bottom: 8px; }
+  .h-hero-art { max-width: 560px; width: 100%; margin: 0 auto; }
+  .h-market-grid, .h-trust-grid, .h-investor-top { grid-template-columns: 1fr; }
+  .h-steps-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); border-left: 0; gap: 40px 0; }
+  .h-step { border-right: 0; border-left: 1px solid #c4cacd; }
+  .h-jobs-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .h-live { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .h-live > div:nth-child(3) { padding-left: 0; border-left: 0; }
+  .h-live > div:nth-child(n+3) { border-top: 1px solid #ffffff1a; }
+  .h-doors { grid-template-columns: 1fr; }
+  .h-door, .h-door + .h-door, .h-door:first-child { padding: 56px 32px; }
+  .h-mock { transform: none; }
+}
+@media (max-width: 600px) {
+  .h-hero h1 { font-size: 46px; }
+  .h-lede { font-size: 16px; }
+  .h-actions { flex-direction: column; }
+  .h-actions .h-btn { width: 100%; }
+  .h-market, .h-steps, .h-trades, .h-trust, .h-investor { padding: 80px 0; }
+  .h-jobs { padding-bottom: 80px; }
+  .h-trades-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .h-trade { min-height: 170px; padding: 20px 16px; }
+  .h-trade-hint { display: none; }
+  .h-steps-grid, .h-jobs-grid, .h-roadmap { grid-template-columns: 1fr; }
+  .h-step-building { height: 120px; }
+  .h-step-building span { height: 24px; }
+  .h-ledger { padding: 6px 18px 18px; }
+  .h-ledger-row { grid-template-columns: 1fr auto; }
+  .h-ledger-dots { display: none; }
+  .h-section-head-row { flex-direction: column; align-items: start; }
+  .h-empty { flex-direction: column; align-items: start; }
+  .h-mock-offer { grid-template-columns: 1fr auto; }
+  .h-mock-offer span:nth-child(2) { display: none; }
+  .h-door, .h-door + .h-door, .h-door:first-child { padding: 48px 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .h-ticker-track { overflow-x: auto; }
+}
